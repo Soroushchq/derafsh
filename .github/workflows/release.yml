@@ -53,7 +53,6 @@ jobs:
             -o ../libbox.aar \
             -target android \
             -androidapi 24 \
-            -androidx \
             -ldflags='-s -w -buildid=' \
             -tags 'with_gvisor,with_quic,with_utls' \
             ./experimental/libbox
