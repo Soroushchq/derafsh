@@ -38,6 +38,16 @@ android {
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Optional ABI filter (used by CI for the small arm64-only APK).
+        // DRF_ABI=arm64-v8a  → filters ALL native libs (libapp, libflutter, libgojni)
+        val drfAbi = System.getenv("DRF_ABI")
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+        if (!drfAbi.isNullOrEmpty()) {
+            ndk { abiFilters += drfAbi }
+        }
     }
 
     signingConfigs {

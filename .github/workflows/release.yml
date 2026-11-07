@@ -132,7 +132,7 @@ jobs:
 
       - name: Build APK (release, arm64-only — smaller download)
         run: |
-          flutter build apk --release --target-platform android-arm64
+          DRF_ABI=arm64-v8a flutter build apk --release --target-platform android-arm64
           VERSION="${GITHUB_REF_NAME#v}"
           cp build/app/outputs/flutter-apk/app-release.apk "Derafsh-${VERSION}-arm64.apk"
 
@@ -201,12 +201,20 @@ jobs:
           name: Derafsh-IPA-unsigned
           path: rel
 
-      - name: Create release
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la rel
-          gh release create "$GITHUB_REF_NAME" \
-            --title "درفش ${GITHUB_REF_NAME#v}" \
-            --notes-file RELEASE_NOTES.md \
-            rel/*
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release exists — replacing assets"
+            gh release delete-asset "$GITHUB_REF_NAME" "Derafsh-$(echo "${GITHUB_REF_NAME#v}")-arm64.apk" --yes 2>/dev/null || true
+            gh release delete-asset "$GITHUB_REF_NAME" "Derafsh-$(echo "${GITHUB_REF_NAME#v}").apk" --yes 2>/dev/null || true
+            gh release delete-asset "$GITHUB_REF_NAME" "Derafsh-iOS-$(echo "${GITHUB_REF_NAME#v}")-unsigned.ipa" --yes 2>/dev/null || true
+            gh release upload "$GITHUB_REF_NAME" rel/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "درفش ${GITHUB_REF_NAME#v}" \
+              --notes-file RELEASE_NOTES.md \
+              rel/*
+          fi
