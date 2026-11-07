@@ -4,6 +4,7 @@ import '../core/config.dart';
 import '../core/strings.dart';
 import '../core/theme.dart';
 import '../state/vpn_controller.dart';
+import 'update_gate.dart';
 
 /// Hidden diagnostics panel — opens after tapping the version label
 /// five times on the home screen.
@@ -14,7 +15,9 @@ class AdvancedSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gatePass = Config.buildNumber >= Config.minRequiredBuild;
+    // Diagnostics must reflect the REAL gate (including a server-provided
+    // min build), not just the local fallback constants.
+    final gatePass = !MandatoryUpdateGate.isBlocked;
 
     return Container(
       decoration: const BoxDecoration(
@@ -51,7 +54,10 @@ class AdvancedSheet extends StatelessWidget {
           _Row(label: S.advancedRowVersion, value: Config.appVersion),
           _Row(label: S.advancedRowBuild, value: '${Config.buildNumber}'),
           _Row(label: S.advancedRowEngine, value: controller.engine.label),
-          _Row(label: S.advancedRowMinBuild, value: '${Config.minRequiredBuild}'),
+          _Row(
+            label: S.advancedRowMinBuild,
+            value: '${MandatoryUpdateGate.effectiveMinBuild}',
+          ),
           _Row(
             label: S.advancedRowGate,
             value: gatePass ? S.advancedGatePass : S.advancedGateBlock,

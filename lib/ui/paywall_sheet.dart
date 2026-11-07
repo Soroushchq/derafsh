@@ -25,21 +25,26 @@ class PaywallSheet extends StatelessWidget {
   Future<void> _onCta(BuildContext context) async {
     final botUrl = RuntimeConfig.botUrl;
     if (botUrl.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text(S.paywallCtaSoon)));
+      _showCtaFallback(context);
       return;
     }
     final uri = Uri.parse(botUrl);
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!context.mounted) return;
+      if (!launched) _showCtaFallback(context);
     } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text(S.paywallCtaSoon)));
-      }
+      if (!context.mounted) return;
+      // no handler for t.me links on this device (or plugin missing)
+      _showCtaFallback(context);
     }
+  }
+
+  void _showCtaFallback(BuildContext context) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text(S.paywallCtaSoon)));
   }
 
   @override

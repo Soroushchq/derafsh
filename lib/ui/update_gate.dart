@@ -26,9 +26,13 @@ class MandatoryUpdateGate extends StatelessWidget {
   }
 
   static bool get isBlocked {
-    final min = _serverMinBuild ?? Config.minRequiredBuild;
-    return Config.buildNumber < min;
+    return Config.buildNumber < effectiveMinBuild;
   }
+
+  /// The minimum build actually enforced right now (server value when the
+  /// API layer has applied one, else the bundled fallback). Exposed for the
+  /// diagnostics sheet so it shows what the gate really uses.
+  static int get effectiveMinBuild => _serverMinBuild ?? Config.minRequiredBuild;
 
   @override
   Widget build(BuildContext context) {
