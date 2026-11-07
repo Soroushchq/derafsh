@@ -3,8 +3,8 @@
 > تنها حافظهٔ بین چرخه‌ها. هر چرخه در ابتدا این فایل را می‌خواند و در پایان به‌روز می‌کند.
 > ⚠️ هیچ «رفع شد» بدون خروجی واقعی ابزار ثبت نکن.
 
-- **چرخهٔ فعلی:** 3 (چرخهٔ بعدی که باید اجرا شود)
-- **آخرین به‌روزرسانی:** 2026-11-07 — پایان چرخهٔ ۲ (۲ باگ پارسر رفع شد؛ ۳۰/۳۰ تست سبز؛ شرط توقف به «فقط تمام‌شدن همهٔ فایل‌ها» تغییر کرد — D7)
+- **چرخهٔ فعلی:** 4 (چرخهٔ بعدی که باید اجرا شود)
+- **آخرین به‌روزرسانی:** 2026-11-07 — پایان چرخهٔ ۳ (ماژول‌های ۷/۸/۹؛ B7 و B8 رفع شد؛ ۳۷/۳۷ تست سبز)
 - **ریپو:** https://github.com/Soroushchq/derafsh — برنچ `audit/full-review` (از main@4c4ee57 = ریلیز v1.0.0)
 - **مسیر محلی:** `/home/z/my-project/derafsh-audit`
 - **Flutter SDK:** `/home/z/my-project/sdk/flutter/bin` (اگر نبود: دانلود `flutter_linux_3.35.4-stable.tar.xz` از storage.googleapis و اکسترکت به `/home/z/my-project/sdk/`، سپس `flutter pub get` در ریپو)
@@ -55,9 +55,9 @@
 | 4 | `lib/data/node_resolver.dart` | ✅ چ۱ | B3: `dispose()` برای بستن http.Client؛ failover درست |
 | 5 | `lib/data/link_parser.dart` | ✅ چ۲ | C1 (vmess grpc service_name از path جا مانده بود) + C2 (پلاگین obfs ss نادیده گرفته می‌شد) رفع شد؛ پورت عددی int پوشش تست شد |
 | 6 | `lib/data/config_builder.dart` | ✅ چ۲ | بی‌باگ — تست ساختاری 1.14 موجود (address/sniff/dns جدید/no block-outbound) + plugin/passthrough بررسی شد |
-| 7 | `lib/data/drf_source.dart` | ⬜ | |
-| 8 | `lib/data/remote_config.dart` | ⬜ | |
-| 9 | `lib/core/*` (config/strings/persian/theme) | ⬜ | |
+| 7 | `lib/data/drf_source.dart` | ✅ چ۳ | B7 (effectiveSource روی کاتالوگ خالی StateError می‌داد) رفع شد؛ پارس/قفل/کلمپ پوشش تست شد |
+| 8 | `lib/data/remote_config.dart` | ✅ چ۳ | B8 (نشت http.Client در refresh) رفع شد؛ اعتبارسنجی bot_url پوشش تست شد |
+| 9 | `lib/core/*` (config/strings/persian/theme) | ✅ چ۳ | بی‌باگ — همه ثابت/تابع خالص؛ appVersion/buildNumber با pubspec (1.0.0+1) هماهنگ |
 | 10 | `lib/ui/home_screen.dart` + `widgets/*` | ⬜ | |
 | 11 | `lib/ui/paywall_sheet.dart` | ⬜ | |
 | 12 | `lib/ui/update_gate.dart` + `advanced_sheet.dart` + `licenses_screen.dart` | ⬜ | |
@@ -82,6 +82,8 @@
 | B5 | `BoxCore.kt` | متوسط | race visibility: `commandServer`/`fileDescriptor` بین ترد worker و main بدون happens-before | بدون @Volatile | `@Volatile` روی هر دو فیلد | اعتبارسنجی کامپایل با CI (ریلیز بعدی)؛ تست‌پذیر در vmesis ندارد — ثبت کدبازبینی |
 | C1 | `link_parser.dart` | متوسط | vmess با `net=grpc` بدون service_name ساخته می‌شد → نودهای grpc به سرورهای با مسیر نامدار وصل نمی‌شدند | قرارداد v2rayNG: نام سرویس grpc در فیلد `path` JSON است اما پارسر serviceName را خالی می‌فرستاد | `serviceName: net=='grpc' ? json['path'] : ''` | `C1: vmess grpc takes service name from path` ✅ |
 | C2 | `link_parser.dart` | متوسط | لینک‌های ss با پلاگین obfs-local/v2ray-plugin فیلدهای plugin/plugin_opts را از دست می‌دادند → نود بدون obfs می‌ساخت و وصل نمی‌شد | SIP002 plugin در query بود ولی خوانده نمی‌شد | نگاشت plugin (simple-obfs→obfs-local) + plugin_opts در `_buildSsNode`؛ پلاگین ناشناخته بی‌صدا drop می‌شود (node سالم می‌ماند) | `C2: ss SIP002 plugin...` و `C2: unknown ss plugin...` ✅ |
+| B7 | `drf_source.dart` + `vpn_controller.dart` | متوسط (لتنات) | `effectiveSource` روی کاتالوگ خالی (`empty()` = مسیر طراحی‌شدهٔ asset ناخوانا) StateError می‌داد — `firstWhere` و `orElse: () => sources.first` هر دو روی لیست خالی پرتاب می‌کنند؛ API عمومی کنترلر | بدون گارد `sources.isEmpty` | امضای `effectiveSource` → `DrfSource?` (خالی → null) + گارد null در `connect()` با `EngineException('هیچ سورسی موجود نیست.')` | `B7: effectiveSource is null-safe...` ×۳ ✅ |
+| B8 | `remote_config.dart` | کم | `http.Client()` inline هرگز close نمی‌شد — همان ریشهٔ B3؛ با timeout سوکت تا GC باز می‌ماند (نشت fd در هر استارتاپ) | client بدون lifecycle | متغیر محلی + `try/finally { client.close(); }` — بسته‌شدن در همهٔ مسیرها (موفق/خطا/non-2xx) | `B8: RuntimeConfig.refresh closes its http client` ×۴ ✅ |
 
 ### باز
 | ID | فایل | شرح | تلاش‌ها | دلیل بازماندن |
@@ -91,6 +93,10 @@
 ### تأییدشده بی‌باگ (شواهد)
 - `usage_ledger`: پنجرهٔ رولینگ + merge بچ‌های زیرِ ۶۰ ثانیه درست است؛ تست B1/B2 مسیر persist را می‌پوشانند.
 - `node_resolver.resolve`: ترتیب failover و بازپخش EngineException آخر درست (بازبینی کد + تست‌های موجود).
+- `lib/core/*` (چ۳): config.dart فقط ثابت (هماهنگ با pubspec 1.0.0+1)؛ strings.dart فقط رشته؛ theme.dart رنگ/gradients + ThemeData؛ persian.dart سه تابع خالص با تست موجود (`faMmSs` کلمپ ۰..۵۹۹ عمدی است). خطای منطقی/نشت/ورودی نامعتبر ندارد.
+- `drf_source.parse` (چ۳): fail-closed عمدی — خرابی asset در main.dart با try/catch به `empty()` می‌رود؛ free_source_id غایب → پیش‌فرض 1؛ locked از id≠freeId مشتق می‌شود (تست چ۳ پوشش کرد).
+- `RuntimeConfig.refresh` (چ۳): مسیرهای non-2xx / ok!=true / map نبودن / بات خارج از t.me همه بی‌اثر و بی‌پرتاب؛ تست B8 چهار مسیر را پوشش داد.
+- **یادداشت باز (بسته‌شده به‌عنوان deferred، نه باگ):** `MandatoryUpdateGate.applyServerMinBuild` هنوز از هیچ مسیر runtime صدا زده نمی‌شود و `RemoteConfig.latestVersionName` مصرف‌کننده ندارد — طبق docstring خود کد این تعمداً PART 3 (Worker) است؛ وصل‌کردنش ویژگی جدید محسوب می‌شود و در دامنهٔ ممیزی نیست. gate فعلاً با fallback محلی min=1 و build=1 باز است (رفتار صحیح v1.0.0).
 
 ## تصمیم‌ها (با دلیل)
 - **D4:** رفع B2 در خود engine انجام شد (نه UI) — هر مصرف‌کنندهٔ آیندهٔ engine همین رفتار را می‌گیرد؛ کنترلر فقط سیاست را اعمال می‌کند.
@@ -101,6 +107,8 @@
 - **D1:** قفل کهنه (>۲۵ دقیقه) توسط چرخهٔ بعد شکسته می‌شود — وگرنه یک کرش کل ممیزی را می‌خواباند.
 - **D2:** `.audit/STATE.md` و `FINAL_REPORT.md` داخل ریپو کامیت می‌شوند (ردیابی + بقا بین سندباکس‌ها)؛ LOCK فقط محلی و هرگز کامیت نمی‌شود.
 - **D3:** تست‌های جدید فقط با `flutter test` — بدون وابستگی جدید مگر اجبار (با ثبت دلیل).
+- **D9 (چ۳):** امضای `SourceCatalog.effectiveSource` به `DrfSource?` تغییر کرد (بجای StateError) — خالی یعنی «اتصال ممکن نیست»؛ تک‌مصرف‌کننده در `connect()` بعد از گارد isEmpty با EngineException مدیریت می‌شود؛ تغییر تایپ در کل ریپو فقط همین یک call-site داشت (grep شد).
+- **D10 (چ۳):** سیم `RuntimeConfig.clientFactory` با `@visibleForTesting` برای تست‌پذیرکردن close() — الگوی D6؛ بدون وابستگی جدید.
 
 ## baseline (چرخهٔ ۱ — ثبت‌شده)
 - `flutter analyze` (قبل از تغییرات): `No issues found!`
@@ -109,6 +117,8 @@
 - `flutter test` (پس از رفع‌های چ۱): **۲۷/۲۷ پاس** (۵ تست جدید)
 - `flutter analyze` (پس از چ۲): `No issues found!`
 - `flutter test` (پس از چ۲): **۳۰/۳۰ پاس** (۳ تست جدید: C1، C2×۲)
+- `flutter analyze` (پس از چ۳): `No issues found!` (۱.۲s)
+- `flutter test` (پس از چ۳): **۳۷/۳۷ پاس** (۷ تست جدید: B7×۳، B8×۴ — `All tests passed!`)
 
 ## تلاش‌های ناموفق (bug → تعداد تلاش)
 - —

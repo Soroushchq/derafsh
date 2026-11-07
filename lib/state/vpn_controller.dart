@@ -80,8 +80,9 @@ class VpnController extends ChangeNotifier {
     _safeNotify();
   }
 
-  /// The source this controller would connect to right now.
-  DrfSource get effectiveSource =>
+  /// The source this controller would connect to right now
+  /// (null when the catalog is empty — connect is not possible).
+  DrfSource? get effectiveSource =>
       catalog.effectiveSource(_selectedSource, _premium);
 
   Future<void> connect() async {
@@ -111,6 +112,11 @@ class VpnController extends ChangeNotifier {
         }
       }
       final source = effectiveSource;
+      if (source == null) {
+        // Unreachable when catalog is non-empty (guarded above); kept as a
+        // defensive check so an empty catalog can never crash the app.
+        throw EngineException('هیچ سورسی موجود نیست.');
+      }
       // failover: if the primary source is dead, try the following ones
       final fallbackUrls = <String>[];
       for (final s in catalog.sources) {

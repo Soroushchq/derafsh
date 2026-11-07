@@ -8,6 +8,7 @@ library;
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 
 import '../core/config.dart';
@@ -25,10 +26,16 @@ class RuntimeConfig {
 
   static String botUrl = Config.telegramBotUrl;
 
+  /// Test seam: when set, [refresh] uses the client it returns instead of
+  /// constructing its own (so tests can observe close()).
+  @visibleForTesting
+  static http.Client Function()? clientFactory;
+
   /// Called by main() right after catalog load; never throws.
   static Future<void> refresh() async {
+    final client = clientFactory?.call() ?? http.Client();
     try {
-      final resp = await http.Client()
+      final resp = await client
           .get(
             Uri.parse(Config.remoteConfigUrl),
             headers: {'User-Agent': 'Derafsh/${Config.appVersion}'},
@@ -45,6 +52,8 @@ class RuntimeConfig {
       developer.log('remote config applied (bot_url)', name: 'drf.config');
     } catch (_) {
       // silent — offline or endpoint unavailable
+    } finally {
+      client.close();
     }
   }
 }

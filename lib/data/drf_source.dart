@@ -67,8 +67,13 @@ class SourceCatalog {
   DrfSource operator [](int index) => sources[index];
 
   /// The source the user may connect to, given premium state.
-  DrfSource effectiveSource(int selectedIndex, bool premium) {
-    if (premium && sources.isNotEmpty) {
+  ///
+  /// Returns null when the catalog is empty (the asset-unreadable fallback
+  /// from `empty()`); callers must treat null as "connect is not possible".
+  /// Never throws, so it is safe to call from UI/display code.
+  DrfSource? effectiveSource(int selectedIndex, bool premium) {
+    if (sources.isEmpty) return null;
+    if (premium) {
       return sources[selectedIndex.clamp(0, sources.length - 1)];
     }
     return sources.firstWhere(
