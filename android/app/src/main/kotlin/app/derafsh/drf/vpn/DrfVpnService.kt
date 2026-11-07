@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
+import android.net.IpPrefix
 import java.net.InetAddress
 import android.net.VpnService
 import android.os.Build
@@ -144,12 +145,16 @@ class DrfVpnService : VpnService(), DrfPlatformInterface {
                 val exclude4 = options.inet4RouteExcludeAddress
                 while (exclude4.hasNext()) {
                     val prefix = exclude4.next()
-                    builder.excludeRoute(InetAddress.getByName(prefix.address()), prefix.prefix())
+                    builder.excludeRoute(
+                        IpPrefix(InetAddress.getByName(prefix.address()), prefix.prefix()),
+                    )
                 }
                 val exclude6 = options.inet6RouteExcludeAddress
                 while (exclude6.hasNext()) {
                     val prefix = exclude6.next()
-                    builder.excludeRoute(InetAddress.getByName(prefix.address()), prefix.prefix())
+                    builder.excludeRoute(
+                        IpPrefix(InetAddress.getByName(prefix.address()), prefix.prefix()),
+                    )
                 }
             } else {
                 val range4 = options.inet4RouteRange
