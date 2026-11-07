@@ -3,8 +3,8 @@
 > تنها حافظهٔ بین چرخه‌ها. هر چرخه در ابتدا این فایل را می‌خواند و در پایان به‌روز می‌کند.
 > ⚠️ هیچ «رفع شد» بدون خروجی واقعی ابزار ثبت نکن.
 
-- **چرخهٔ فعلی:** 5 (چرخهٔ بعدی که باید اجرا شود)
-- **آخرین به‌روزرسانی:** 2026-11-08 — پایان چرخهٔ ۴ (ماژول‌های ۱۰/۱۱/۱۲؛ B9 و B10 رفع شد؛ ۴۱/۴۱ تست سبز)
+- **چرخهٔ فعلی:** 6 (چرخهٔ بعدی که باید اجرا شود)
+- **آخرین به‌روزرسانی:** 2026-11-08 — پایان چرخهٔ ۵ (ماژول ۱۳؛ B11 رفع شد؛ ۴۲/۴۲ تست سبز)
 - **ریپو:** https://github.com/Soroushchq/derafsh — برنچ `audit/full-review` (از main@4c4ee57 = ریلیز v1.0.0)
 - **مسیر محلی:** `/home/z/my-project/derafsh-audit`
 - **Flutter SDK:** `/home/z/my-project/sdk/flutter/bin` (اگر نبود: دانلود `flutter_linux_3.35.4-stable.tar.xz` از storage.googleapis و اکسترکت به `/home/z/my-project/sdk/`، سپس `flutter pub get` در ریپو)
@@ -61,7 +61,7 @@
 | 10 | `lib/ui/home_screen.dart` + `widgets/*` | ✅ چ۴ | بی‌باگ — listener در dispose جدا؛ notifyها خارج از build؛ UsageStrip گارد تقسیم بر صفر دارد (شواهد در «تأییدشده بی‌باگ») |
 | 11 | `lib/ui/paywall_sheet.dart` | ✅ چ۴ | B9 (جواب بی‌صدای CTA وقتی launchUrl=false) رفع شد |
 | 12 | `lib/ui/update_gate.dart` + `advanced_sheet.dart` + `licenses_screen.dart` | ✅ چ۴ | B10 (ردیف گیت در diagnostics فقط ثابت محلی را می‌دید نه serverMinBuild) رفع شد؛ assets/legal موجود و در pubspec اعلام‌شده |
-| 13 | `lib/design/*` + `lib/intro/*` | ⬜ | |
+| 13 | `lib/design/*` + `lib/intro/*` | ✅ چ۵ | B11 (تاج پرتو کاویانی به‌خاطر transform بدون counter-translate یک‌اندازهٔ مرکز جابه‌جا می‌شد) رفع شد؛ بقیهٔ فایل‌ها بی‌باگ (شواهد در «تأییدشده بی‌باگ») |
 | 14 | `lib/app.dart` + `lib/main.dart` | ⬜ | |
 | 15 | `android/.../vpn/*.kt` | ⬜ | |
 | 16 | `android/.../MainActivity.kt` + `DrfApplication.kt` + Manifest | ⬜ | |
@@ -86,6 +86,7 @@
 | B8 | `remote_config.dart` | کم | `http.Client()` inline هرگز close نمی‌شد — همان ریشهٔ B3؛ با timeout سوکت تا GC باز می‌ماند (نشت fd در هر استارتاپ) | client بدون lifecycle | متغیر محلی + `try/finally { client.close(); }` — بسته‌شدن در همهٔ مسیرها (موفق/خطا/non-2xx) | `B8: RuntimeConfig.refresh closes its http client` ×۴ ✅ |
 | B9 | `paywall_sheet.dart` | کم | CTA پکیوال وقتی `launchUrl` مقدار false برمی‌گرداند (دستگاه بدون هندلر t.me) کاملاً بی‌صدا رد می‌شد — کاربر لمس می‌کند و هیچ‌چیز نمی‌بیند؛ فقط exception هندل شده بود | برگشت false هندل نشده بود | الگوی `update_gate._onDownload` کپی شد: `!launched → snackbar` + استخراج `_showCtaFallback` + چک `context.mounted` بعد await | `B9: CTA shows feedback...` ×۳ (false/throw/empty-bot-url) ✅ |
 | B10 | `advanced_sheet.dart` + `update_gate.dart` | کم (لتنات) | ردیف «وضعیت گیت» در پنل پیشرفته فقط `buildNumber >= minRequiredBuild` محلی را حساب می‌کرد — اگر سرور `applyServerMinBuild` بزند، diagnostics «عبور» نشان می‌داد در حالی که گیت واقعی مسدود است؛ ردیف حداقل بیلد هم مقدار مؤثر را نشان نمی‌داد | recompute محلی به‌جای منبع حقیقت | `gatePass = !MandatoryUpdateGate.isBlocked` + getter عمومی `effectiveMinBuild` (=_serverMinBuild ?? local) و نمایش آن | `B10: advanced diagnostics reflect the real update gate` ✅ |
+| B11 | `design/kaviani_star.dart` | **بالا** (چشمی) | تاج پرتوهای چرخان ستارهٔ کاویانی در همهٔ moodهای فعال (awakening/radiant) یک‌اندازهٔ مرکز (`c`) از ستاره فاصله می‌گرفت و مدار می‌زد — مسیرهای `_rayPath` حول `c` ساخته می‌شدند ولی بعد از `translate(c)+rotate(θ)` کشیده می‌شدند → موقعیت دستگاه = `c + R·c + R·dir·r`؛ در spin=0 تاج در `2c` (گوشهٔ پایین-راست) نقاشی می‌شد | تبدیل pivot بدون counter-translate روی هندسهٔ مرکز-محور | ایدیوم pivot: `translate(c) → rotate(θ) → translate(−c)` تا هندسهٔ مرکز-محور حول مرکز ستاره بچرخد؛ شیدر (در فضای محلی) دست‌نخورده ماند | تست پیکسلی `B11: ray crown is painted around the star center...` (PictureRecorder→toImage؛ قبل از رفع alpha=0 در پیکسل پرتو، بعد از رفع >0) ✅ |
 
 ### باز
 | ID | فایل | شرح | تلاش‌ها | دلیل بازماندن |
@@ -106,6 +107,10 @@
 - `licenses_screen.dart` (چ۴): `loadString` بعد از await با `context.mounted` گارد شده؛ assets/legal/LICENSE.md و OFL.txt موجود و در pubspec (بخش assets) اعلام‌شده‌اند → مسیر fail عملاً نمی‌رسد؛ `_FullTextScreen` presentational.
 - `paywall_sheet.dart` (چ۴ پس از B9): هر سه مسیر CTA (خالی/false/exception) بازخورد کاربر دارند؛ `_ValueCell/_StepRow/_MathCard/_DelayedEntrance` presentational خالص.
 - **مشاهدات (باگ طبقه‌بندی نمی‌شوند):** `lastErrorMessage` در ۵ نقطه نوشته می‌شود ولی هیچ خواننده‌ای در UI ندارد (نمایش آن تصمیم UX/ویژگی است)؛ snackbar خطای native-drop حین connected (prev==connecting نیست) بی‌صدا است ولی وضعیت UI به «قطع» تغییر می‌کند — هر دو برای PART 3/UX آینده ثبت شد، خارج ۷ دستهٔ باگ.
+- `shine_button.dart` (چ۵): منطق رنگ در هر ۴ ترکیب (crimson×enabled) درست؛ `onTap` فقط وقتی enabled اجرا می‌شود؛ `_sheen` در dispose بسته می‌شود؛ press-state در onTapCancel/onTapUp همیشه ریست می‌شود. مشاهدات ظاهری (باگ نیست): دکمهٔ disabled سایهٔ crimson کم‌رنگ می‌گیرد و شیمر هم روی disabled می‌چرخد — انتخاب طراحی.
+- `sparks.dart` (چ۵): پارامترها per-particle با `Random(i·7919)` قطعی‌اند؛ alpha = `sin(t·π).clamp(0,1)` هرگز از ۱ نمی‌گذرد؛ مسیر صعودی (y معکوس + drift بالا) عمدی است. یادداشت: `shouldRepaint` فقط `progress` را مقایسه می‌کند (نه `count`) — تک‌call-site با count ثابت (26)؛ اگر در آینده count داینامیک شود باید اضافه شود (observation، نه باگ).
+- `stagger_in.dart` (چ۵): presentational خالص؛ opacity با clamp گارد شده؛ تأخیر per-index فقط duration را بلند می‌کند؛ child به TweenAnimationBuilder پاس داده می‌شود (بازسازی ارزان).
+- `intro.dart` (چ۵): status-listener فقط در completed `onDone` می‌زند و با dispose کنترلر جدا می‌شود (پس از unmount فراخوانی نمی‌شود)؛ skip با tap کار می‌کند؛ همهٔ sub-progressها با `.clamp(0,1)` گارد شده‌اند؛ overshoot عمدی easeOutBack در `unfold` بی‌خطر است (alpha ها را موتور کلمپ می‌کند؛ مقدار نهایی دقیقاً ۱)؛ `HaloPaint` حول مرکز و بدون transform مشکل‌ساز است و shouldRepaint هر دو فیلد را می‌پوشاند.
 
 ## تصمیم‌ها (با دلیل)
 - **D4:** رفع B2 در خود engine انجام شد (نه UI) — هر مصرف‌کنندهٔ آیندهٔ engine همین رفتار را می‌گیرد؛ کنترلر فقط سیاست را اعمال می‌کند.
@@ -120,6 +125,7 @@
 - **D10 (چ۳):** سیم `RuntimeConfig.clientFactory` با `@visibleForTesting` برای تست‌پذیرکردن close() — الگوی D6؛ بدون وابستگی جدید.
 - **D11 (چ۴):** `url_launcher_platform_interface` به‌عنوان **dev dependency** اعلام شد (flutter pub add --dev) — از قبل وابستگی transitive قفل‌شدهٔ url_launcher بود؛ هیچ پکیج جدیدی به درخت اضافه نشد و فقط lint `depend_on_referenced_packages` در تست B9 را برطرف می‌کند (سطح رسمی mock کردن url_launcher).
 - **D12 (چ۴):** getter عمومی `MandatoryUpdateGate.effectiveMinBuild` اضافه شد (منبع حقیقت گیت) تا diagnostics بدون دسترسی به فیلد خصوصی `_serverMinBuild` مقدار واقعی را نشان دهد؛ رفتار `isBlocked` از نظر منطقی دست‌نخورده ماند.
+- **D13 (چ۵):** رفع B11 با ایدیوم pivot (`translate(c)→rotate→translate(−c)`) انجام شد نه بازنویسی هندسه به مبدا-محور — کمترین diff و شیدر/گرادیان‌ها (که در فضای محلیِ همان مختصات‌ها ساخته می‌شوند) بدون تغییر معتبر می‌مانند. روش اثبات: تست پیکسلی با PictureRecorder→toImage→rawRgba (بدون وابستگی جدید؛ golden/goldenFile متکی به платفروم نیست) — «پیکسل پرتو باید رنگ داشته باشد» قبل از رفع قرمز و بعد از رفع سبز.
 
 ## baseline (چرخهٔ ۱ — ثبت‌شده)
 - `flutter analyze` (قبل از تغییرات): `No issues found!`
@@ -132,6 +138,8 @@
 - `flutter test` (پس از چ۳): **۳۷/۳۷ پاس** (۷ تست جدید: B7×۳، B8×۴ — `All tests passed!`)
 - `flutter analyze` (پس از چ۴): `No issues found!` (۱.۳s)
 - `flutter test` (پس از چ۴): **۴۱/۴۱ پاس** (۴ تست جدید: B9×۳، B10×۱ — `All tests passed!`)
+- `flutter analyze` (پس از چ۵): `No issues found!` (۱.۵s)
+- `flutter test` (پس از چ۵): **۴۲/۴۲ پاس** (۱ تست جدید: B11 — `All tests passed!`)
 
 ## تلاش‌های ناموفق (bug → تعداد تلاش)
 - B10-تست → ۳ تلاش (خودِ رفع B9/B10 از اول سبز بود؛ این‌ها نوسان نوشتن تست بود): ۱) `find.text('1')` دو match داشت (ردیف بیلد و ردیف حداقل‌بیلد) → `findsNWidgets(2)`؛ ۲) تغییر static بدون dirty کردن درخت rebuild نمی‌شود → به‌جای `pump()` از `pumpWidget` مجدد؛ ۳) سبز.

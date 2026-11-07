@@ -90,8 +90,13 @@ class KavianiStarPainter extends CustomPainter {
         _ => 0.0,
       };
       canvas.save();
+      // Pivot idiom: T(c)·R(θ)·T(−c). The ray paths below are built around
+      // `c` (not the origin), so without the counter-translate the crown
+      // would land at c + R·c — one center-offset away from the star and
+      // orbiting it as it spins.
       canvas.translate(c.dx, c.dy);
       canvas.rotate(spin * 2 * math.pi * speed);
+      canvas.translate(-c.dx, -c.dy);
       for (var i = 0; i < 8; i++) {
         final ang = i * math.pi / 4;
         final rayPath = _rayPath(c, rOut * 1.06, rOut * 1.42, ang);
