@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+
+linter:
+  rules:
+    # Keep the default flutter_lints set; add a few stricter ones we comply with:
+    prefer_single_quotes: true
+    unawaited_futures: false
