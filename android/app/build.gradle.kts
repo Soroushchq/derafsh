@@ -39,17 +39,6 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // Optional ABI filter (used by CI for the small arm64-only APK).
-        // Set drf.abi=arm64-v8a in gradle.properties (per-invocation, daemon-safe)
-        // or DRF_ABI in the environment. Filters ALL native libs.
-        val drfAbiList = (project.findProperty("drf.abi") as String?
-            ?: System.getenv("DRF_ABI"))
-            ?.split(',')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-        if (!drfAbiList.isNullOrEmpty()) {
-            ndk { abiFilters += drfAbiList }
-        }
     }
 
     signingConfigs {
