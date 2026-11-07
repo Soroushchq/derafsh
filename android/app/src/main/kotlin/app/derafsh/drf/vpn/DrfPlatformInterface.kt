@@ -1,5 +1,6 @@
 package app.derafsh.drf.vpn
 
+import app.derafsh.drf.DrfApplication
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Process

@@ -128,7 +128,7 @@ class DrfVpnService : VpnService(), DrfPlatformInterface {
                 while (route4.hasNext()) {
                     hasRoute4 = true
                     val prefix = route4.next()
-                    builder.addRoute(IpPrefix(prefix.address(), prefix.prefix()))
+                    builder.addRoute(IpPrefix("${prefix.address()}/${prefix.prefix()}"))
                 }
                 if (!hasRoute4) builder.addRoute("0.0.0.0", 0)
 
@@ -137,19 +137,19 @@ class DrfVpnService : VpnService(), DrfPlatformInterface {
                 while (route6.hasNext()) {
                     hasRoute6 = true
                     val prefix = route6.next()
-                    builder.addRoute(IpPrefix(prefix.address(), prefix.prefix()))
+                    builder.addRoute(IpPrefix("${prefix.address()}/${prefix.prefix()}"))
                 }
                 if (!hasRoute6) builder.addRoute("::", 0)
 
                 val exclude4 = options.inet4RouteExcludeAddress
                 while (exclude4.hasNext()) {
                     val prefix = exclude4.next()
-                    builder.excludeRoute(IpPrefix(prefix.address(), prefix.prefix()))
+                    builder.excludeRoute(IpPrefix("${prefix.address()}/${prefix.prefix()}"))
                 }
                 val exclude6 = options.inet6RouteExcludeAddress
                 while (exclude6.hasNext()) {
                     val prefix = exclude6.next()
-                    builder.excludeRoute(IpPrefix(prefix.address(), prefix.prefix()))
+                    builder.excludeRoute(IpPrefix("${prefix.address()}/${prefix.prefix()}"))
                 }
             } else {
                 val range4 = options.inet4RouteRange
