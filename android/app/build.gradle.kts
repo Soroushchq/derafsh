@@ -19,9 +19,8 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "app.derafsh.drf"
-    // Explicit (not flutter defaults) so the build is deterministic and
-    // libbox APIs (IpPrefix, specialUse FGS) always compile.
-    compileSdk = 35
+    // libbox AAR dependencies (androidx.core 1.17+) require compileSdk 36
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
