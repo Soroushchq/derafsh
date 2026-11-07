@@ -30,9 +30,15 @@ SDK (for the APK) or Xcode (for iOS).
 ```bash
 # 1) build the libbox engine (Android)
 git clone --depth 1 --branch v1.14.4 https://github.com/SagerNet/sing-box
-go install golang.org/x/mobile/cmd/gomobile@latest && gomobile init
-cd sing-box && gomobile bind -o ../libbox.aar -androidapi 24 -androidx \
-  -ldflags='-s -w -buildid=' -tags 'with_gvisor,with_quic,with_utls' \
+# exactly like CI (release.yml) — the sagernet fork; upstream gomobile
+# does not work against sing-box 1.14
+go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.13
+$(go env GOPATH)/bin/gomobile init
+cd sing-box && $(go env GOPATH)/bin/gomobile bind -o ../libbox.aar -androidapi 24 \
+  -javapkg=io.nekohasekai -libname=box -trimpath -buildvcs=false \
+  -ldflags='-s -w -buildid= -X github.com/sagernet/sing-box/constant.Version=v1.14.4 -X runtime.godebugDefault=multipathtcp=0,tlssha1=1 -checklinkname=0' \
+  -tags 'with_gvisor,with_quic,with_utls,badlinkname,tfogo_checklinkname0' \
   ./experimental/libbox
 mkdir -p ../android/app/libs && mv ../libbox.aar ../android/app/libs/
 

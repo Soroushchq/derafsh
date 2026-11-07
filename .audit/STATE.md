@@ -3,8 +3,8 @@
 > تنها حافظهٔ بین چرخه‌ها. هر چرخه در ابتدا این فایل را می‌خواند و در پایان به‌روز می‌کند.
 > ⚠️ هیچ «رفع شد» بدون خروجی واقعی ابزار ثبت نکن.
 
-- **چرخهٔ فعلی:** 7 (چرخهٔ بعدی که باید اجرا شود)
-- **آخرین به‌روزرسانی:** 2026-11-08 — پایان چرخهٔ ۶ (ماژول‌های ۱۴/۱۵/۱۶؛ B12–B15 رفع شد؛ ۴۲/۴۲ تست سبز). یادداشت محیط: سندباکس ریست شد — ریپو از origin/audit/full-review (worktree در مسیر استاندارد) و SDK دوباره دانلود/نصب شد.
+- **چرخهٔ فعلی:** 7 — **ممیزی کامل شد؛ همهٔ ۲۰ ماژول ✅** (FINAL_REPORT.md نوشته شد؛ کرون‌جاب حذف می‌شود)
+- **آخرین به‌روزرسانی:** 2026-11-08 — پایان چرخهٔ ۷ (ماژول‌های ۱۷/۱۸/۱۹/۲۰؛ B16 رفع شد؛ ۴۲/۴۲ تست سبز)
 - **ریپو:** https://github.com/Soroushchq/derafsh — برنچ `audit/full-review` (از main@4c4ee57 = ریلیز v1.0.0)
 - **مسیر محلی:** `/home/z/my-project/derafsh-audit`
 - **Flutter SDK:** `/home/z/my-project/sdk/flutter/bin` (اگر نبود: دانلود `flutter_linux_3.35.4-stable.tar.xz` از storage.googleapis و اکسترکت به `/home/z/my-project/sdk/`، سپس `flutter pub get` در ریپو)
@@ -65,10 +65,10 @@
 | 14 | `lib/app.dart` + `lib/main.dart` | ✅ چ۶ | بی‌باگ — شواهد در «تأییدشده بی‌باگ» |
 | 15 | `android/.../vpn/*.kt` | ✅ چ۶ | B12 (کال‌بک شبکه بدون Handler روی API<۲۸ روی main thread می‌خوابید) + B13 (بدون @Volatile روی listener/defaultNetwork) رفع شد |
 | 16 | `android/.../MainActivity.kt` + `DrfApplication.kt` + Manifest | ✅ چ۶ | B14 (launch بعد از موافقت بدون درخواست‌کنندهٔ زنده) + B15 (broadcast توقف بدون گارد امضا روی API<۳۳) رفع شد |
-| 17 | `.github/workflows/*` | ⬜ | |
-| 18 | `ios/` (Runner) | ⬜ | |
-| 19 | کیفیت تست‌های `test/*` | ⬜ | |
-| 20 | `docs/*` + README + SOURCE | ⬜ | |
+| 17 | `.github/workflows/*` | ✅ چ۷ | بی‌باگ — محتوای فعلی همان چیزی است که ریلیز v1.0.0 را با هر ۳ asset سبز ساخت (شواهد در «تأییدشده بی‌باگ») |
+| 18 | `ios/` (Runner) | ✅ چ۷ | بی‌باگ — شل استاندارد Flutter؛ iOS عمداً بدون موتور VPN (UnsupportedEngine در main.dart)؛ IPA v1.0.0 در ریلیز موجود است |
+| 19 | کیفیت تست‌های `test/*` | ✅ چ۷ | بی‌باگ — همهٔ تست‌ها ادعای واقعی دارند؛ timerها با fakeAsync/fake clock؛ بدون وابستگی به wall-clock (شواهد در «تأییدشده بی‌باگ») |
+| 20 | `docs/*` + README + SOURCE | ✅ چ۷ | B16 (دستورالعمل gomobile در README/SOURCE با CI هماهنگ نبود) رفع شد؛ ادعاهای دیگر با کد تطبیق داده شد |
 
 ## باگ‌ها
 
@@ -91,6 +91,7 @@
 | B13 | `android/.../NetworkMonitor.kt` | کم | `listener` و `defaultNetwork` بین ترد کال‌بک، ترد worker libbox و main بدون @Volatile ردوبدل می‌شدند — JMM هیچ happens-before بین آن ترد‌ها ندارد؛ خواندن کهنه = ازدست‌رفتن آپدیت اولیهٔ اینترفیس | همان ریشهٔ B5 | `@Volatile` روی هر دو فیلد | بازبینی کد (الگوی پذیرفته‌شدهٔ B5)؛ کامپایل CI ✅ |
 | B14 | `android/.../MainActivity.kt` | کم (لبه‌ای) | در `onActivityResult` مسیر RESULT_OK بدون چک `pendingVpnResult != null` سرویس را استارت می‌زد — اگر اکتیویتی حین دیالوگ رضایت بازسازی/کرش می‌کرد، Dart-isolate قبلی مرده بود و VPN بدون درخواست‌کنندهٔ زنده بالا می‌آمد؛ UI تازه «قطع» را نشان می‌داد در حالی که تونل فعال بود (ناهمگونی state → مسیر double-start در `BoxCore.startService` هم باز می‌شد)؛ `_onNativeState` رویداد connected غیرمنتظره را نادیده می‌گیرد (return زودهنگام) پس همگام نمی‌شد | نتیجهٔ pending فقط در فیلد اکتیویتی نگه داشته می‌شود و null بودنش معنای «درخواست‌کنندهٔ مرده» را دارد | استارت سرویس و reply به `result != null` گارد شد؛ درخواست‌کنندهٔ مرده → رضایت drop می‌شود تا UI تازه با native همگون بماند و کاربر صریح وصل شود | بازبینی کد + چرخهٔ حیات FlutterActivity (engine با host نابود می‌شود)؛ کامپایل CI ✅ |
 | B15 | `android/.../DrfVpnService.kt` + Manifest | کم | گیرندهٔ broadcast توقف روی API<۳۳ بدون RECEIVER_NOT_EXPORTED/permission ثبت می‌شد → هر اپی می‌توانست `app.derafsh.drf.vpn.STOP` را پخش کند و VPN را بی‌صدا ببندد (DoS آزاردهنده؛ روی ۳۳+ بسته بود) | ثبت implicit-export در API قدیمی | permission سفیدسطح امضا `app.derafsh.drf.permission.STOP_VPN` (protectionLevel=signature در Manifest + uses-permission) و ثبت گیرنده در شاخهٔ <۳۳ با فرم ۴-آرگومانی `registerReceiver(..., STOP_PERMISSION, null)` | بازبینی کد + مستندات اندروید (امضای خودِ اپ همیشه پاس می‌شود)؛ کامپایل CI ✅ |
+| B16 | `README.md` + `SOURCE.md` | کم (سند) | دستورالعمل بیلد libbox به کاربر می‌گفت `go install golang.org/x/mobile/cmd/gomobile@latest` — درحالی‌که sing-box v1.14 فقط با **شاخهٔ sagernet gomobile v0.1.13** بیلد می‌شود (کامنت CI همین را می‌گوید) و `-javapkg=io.nekohasekai`/تگ‌ها/ldflags هم غایب بودند → کسی که README را دنبال کند یا بیلد شکست می‌خورد یا AAR با پکیج‌نام اشتباه می‌سازد و import های کاتلین (`io.nekohasekai.libbox.*`) می‌شکنند | کپی‌شدن دستورالعمل قدیمی/عمومی به‌جای هم‌ترازی با release.yml | هم‌ترازی هر دو اسنیپت با CI: نصب gomobile+gobind از شاخهٔ sagernet@v0.1.13، `gomobile init`، و پرچم‌های bind دقیقاً برابر CI (javapkg/libname/trimpath/ldflags شامل constant.Version و godebug و checklinkname، تگ‌های badlinkname/tfogo_checklinkname0)؛ ضمناً «ستارهٔ چهارپر» README به «هشت‌پر» (هم‌تراز با DESIGN.md و پینتر) اصلاح شد | بازبینی محتوایی + تطبیق خط‌به‌خط با release.yml؛ برای سند واحد تست واحد معنا ندارد (پیش‌نمونهٔ D14) ✅ |
 
 ### باز
 | ID | فایل | شرح | تلاش‌ها | دلیل بازماندن |
@@ -121,6 +122,10 @@
 - `VpnStateBus.kt` (چ۶): `sink` فقط روی main thread لمس می‌شود (setSink از EventChannel روی main، emit هم روی main.post) → thread-confined؛ `phase/error/pendingConfig` همه @Volatile؛ emit برای sink خالی بی‌اثر.
 - `DrfPlatformInterface.kt` (چ۶): متدهای پشتیبانی‌نشده به‌صورت صریح error() می‌دهند (fail-closed)؛ `getInterfaces` با fallback های runCatching/firstOrNull می‌سازد. **مشاهدهٔ تاییدشده بی‌اثر:** `StringArray.len() = 0` — سورس sing-box v1.14.4 (کلون محلی /tmp/singbox) نشان می‌دهد مصرف‌کنندهٔ Go همه‌جا `iteratorToArray` است که فقط `HasNext/Next` می‌خواند؛ تنها `.Len()`های libbox روی تایپ‌های دیگرند → در نسخهٔ پین‌شده بی‌اثر؛ اگر libbox ارتقا یافت باید len درست شود (یادداشت دیده‌بان).
 - **`NetworkMonitor.kt` یادداشت (باگ نیست):** HandlerThread اختصاصی `drf-net-callback` در stop() quit نمی‌شود (۱ ترد بیکار تا مرگ پروسه، singleton پردازه‌ای) — بازسازی handler بعد از quit نیاز به تغییر ساختاری دارد و سود عملی ندارد؛ ثبت شد تا اگر مدل lifecycle عوض شد revisited شود.
+- `release.yml`/`ci.yml` (چ۷): محتوای release.yml از ۵fda2c6 تا 4c4ee57 (تگ v1.0.0) بدون تغییر است و ریلیز v1.0.0 در GitHub با هر ۳ asset (APK universal، APK arm64، IPA unsigned) ساخته شد → مسیر کامل CI/CD به‌صورت تجربی سبز است؛ heredoc امضای keystore با تورفتگی بلوک YAML درست بسته می‌شود (EOF در ستون صفر پس از strip تورفتگی بلوک)؛ نام assetها بین cp/delete-asset/upload هماهنگ‌اند؛ RELEASE_NOTES.md موجود و کامیت‌شده است؛ permissions فقط contents:write.
+- `ios/Runner` (چ۷): AppDelegate/Info.plist/pbxproj استاندارد scaffold؛ deployment target 13.0؛ بدون entitlement اضافه؛ موتور VPN روی iOS عمداً UnsupportedEngine است (پیام صریح) — UI-only طبق نقشهٔ پروژه؛ نبودن Podfile در ریپو با بیلد موفق v1.0.0 سازگار است (flutter در CI Podfile را تولید می‌کند) — توصیه: کامیت Podfile برای تکرارپذیری (observation).
+- کیفیت تست‌ها (چ۷): ۹ فایل تست بازبینی کامل شد — هر تست ادعای قابل‌قصدمستقل دارد (بدون تست همیشه‌سبز)؛ timerها در fakeAsync/`debugTick`/pump اند نه wall-clock؛ state سراسری (`MandatoryUpdateGate.applyServerMinBuild`) در همان تست ریست می‌شود و فایل‌های تست در isolate جدا اجرا می‌شوند؛ کنترلرها dispose می‌شوند؛ نگاشت شمارهٔ تست‌ها با باگ‌ها ۱:۱ است (B1/B2/B3/B6، C1/C2، B7×۳، B8×۴، B9×۳، B10، B11).
+- ادعاهای docs (چ۷): «۱۹۶ سورس» با sources.json (196، free_id=1) ✓؛ پشتیبانی tuic/httpupgrade در پارسر ✓؛ سهمیهٔ ۳۰ دقیقه/۲۴h رولینگ ✓؛ بات `@PDerafshVpnbot` ✓؛ failover ≤۵ ✓؛ DESIGN.md ستارهٔ ۸پر (هم‌تراز پینتر) ✓؛ RELEASE.md با جریان واقعی release.yml و گیت minRequiredBuild هم‌خوان است ✓.
 
 ## تصمیم‌ها (با دلیل)
 - **D4:** رفع B2 در خود engine انجام شد (نه UI) — هر مصرف‌کنندهٔ آیندهٔ engine همین رفتار را می‌گیرد؛ کنترلر فقط سیاست را اعمال می‌کند.
@@ -139,6 +144,7 @@
 - **D14 (چ۶):** برای باگ‌های کاتلین/منیفست (B12–B15) تست flutter ساختاراً ممکن نیست (بدون Android SDK/Robolectric محلی و ممنوعیت وابستگی جدید) — همان پیش‌نمونهٔ B5: شواهد = بازبینی دقیق + ارجاع به مستندات اندروید/چرخهٔ حیات Flutter + کامپایل CI در ریلیز بعدی؛ گیت Dart (analyze/test) برای اطمینان از سالم‌ماندن سمت Dart اجرا و سبز ماند.
 - **D15 (چ۶):** رفع B14 به‌جای «معتبرکردن reply پس از بازسازی»، استارت را روی درخواست‌کنندهٔ زنده گارد کرد — پاسخ‌دادن به Result یک engine مرده نامعتبر است و استارت‌نکردن، native و UI تازه را همگون نگه می‌دارد (کاربر دوباره وصل می‌شود)؛ مسیر denial دست نخورد.
 - **D16 (چ۶):** رفع B15 با permission سطح-امضا (نه سوییچ به startService) — چون auto-disconnect سهمیه در بک‌گراند از broadcast استفاده می‌کند و startService در بک‌گراند روی API ۲۶+ IllegalStateException می‌دهد؛ permission امضا برای خودِ اپ همیشه پاس می‌شود و برای دیگران غیرممکن است.
+- **D17 (چ۷):** رفع B16 صرفاً سندی است (بدون تست واحد) — معیار درستی، تطبیق خط‌به‌خط با release.yml است که به‌صورت تجربی ریلیز v1.0.0 را ساخته؛ الگوی D14.
 
 ## baseline (چرخهٔ ۱ — ثبت‌شده)
 - `flutter analyze` (قبل از تغییرات): `No issues found!`
@@ -155,6 +161,8 @@
 - `flutter test` (پس از چ۵): **۴۲/۴۲ پاس** (۱ تست جدید: B11 — `All tests passed!`)
 - `flutter analyze` (پس از چ۶): `No issues found!` (۱۵.۱s — سرد بعد از نصب مجدد SDK)
 - `flutter test` (پس از چ۶): **۴۲/۴۲ پاس** (`All tests passed!`)
+- `flutter analyze` (پس از چ۷): `No issues found!` (۲.۷s)
+- `flutter test` (پس از چ۷): **۴۲/۴۲ پاس** (`All tests passed!`)
 
 ## تلاش‌های ناموفق (bug → تعداد تلاش)
 - B10-تست → ۳ تلاش (خودِ رفع B9/B10 از اول سبز بود؛ این‌ها نوسان نوشتن تست بود): ۱) `find.text('1')` دو match داشت (ردیف بیلد و ردیف حداقل‌بیلد) → `findsNWidgets(2)`؛ ۲) تغییر static بدون dirty کردن درخت rebuild نمی‌شود → به‌جای `pump()` از `pumpWidget` مجدد؛ ۳) سبز.

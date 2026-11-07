@@ -6,7 +6,7 @@
 
 ## وضعیت — v1.0.0 (اولین ریلیز عمومی)
 
-- ✅ هویت بصری کاویانی (رنگ، فرم، تایپوگرافی وزیرمتن) + انیمیشن‌های ستارهٔ چهارپر و جرقه‌های سندان
+- ✅ هویت بصری کاویانی (رنگ، فرم، تایپوگرافی وزیرمتن) + انیمیشن‌های ستارهٔ هشت‌پر و جرقه‌های سندان
 - ✅ **موتور واقعی sing-box v1.14.4 (libbox)** روی اندروید — TUN، auto-route، DoH از مسیر تونل
 - ✅ **۱۹۶ سورس** (درافش ۱ تا درافش ۱۹۶) با انتخاب خودکار بهترین کانفیگ (اولویت Reality/Vision)
 - ✅ پشتیبانی از vmess / vless / trojan / shadowsocks / hysteria2 / tuic + ترنسپورت‌های ws/grpc/h2/httpupgrade
@@ -45,9 +45,14 @@ flutter build ios --release --no-codesign   # iOS (IPA امضانشده — تو
 
 ```bash
 git clone --depth 1 --branch v1.14.4 https://github.com/SagerNet/sing-box
-go install golang.org/x/mobile/cmd/gomobile@latest && gomobile init
-cd sing-box && gomobile bind -o ../libbox.aar -androidapi 24 -androidx \
-  -ldflags='-s -w -buildid=' -tags 'with_gvisor,with_quic,with_utls' \
+# دقیقاً مثل CI (release.yml) — شاخهٔ sagernet؛ gomobile رسمی با sing-box 1.14 کار نمی‌کند
+go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.13
+$(go env GOPATH)/bin/gomobile init
+cd sing-box && $(go env GOPATH)/bin/gomobile bind -o ../libbox.aar -androidapi 24 \
+  -javapkg=io.nekohasekai -libname=box -trimpath -buildvcs=false \
+  -ldflags='-s -w -buildid= -X github.com/sagernet/sing-box/constant.Version=v1.14.4 -X runtime.godebugDefault=multipathtcp=0,tlssha1=1 -checklinkname=0' \
+  -tags 'with_gvisor,with_quic,with_utls,badlinkname,tfogo_checklinkname0' \
   ./experimental/libbox
 ```
 
