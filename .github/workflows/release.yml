@@ -125,15 +125,21 @@ jobs:
           fi
 
       - name: Build APK (release, universal)
-        run: flutter build apk --release
-
-      - name: Rename artifact
         run: |
+          flutter build apk --release
           VERSION="${GITHUB_REF_NAME#v}"
           cp build/app/outputs/flutter-apk/app-release.apk "Derafsh-${VERSION}.apk"
-          ls -la Derafsh-*.apk
 
-      - name: Upload APK artifact
+      - name: Build APK (release, arm64-only — smaller download)
+        run: |
+          flutter build apk --release --target-platform android-arm64
+          VERSION="${GITHUB_REF_NAME#v}"
+          cp build/app/outputs/flutter-apk/app-release.apk "Derafsh-${VERSION}-arm64.apk"
+
+      - name: List artifacts
+        run: ls -la Derafsh-*.apk
+
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Derafsh-APK
