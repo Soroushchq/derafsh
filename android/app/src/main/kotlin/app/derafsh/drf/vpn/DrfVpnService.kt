@@ -25,6 +25,10 @@ class DrfVpnService : VpnService(), DrfPlatformInterface {
     companion object {
         const val ACTION_STOP = "app.derafsh.drf.vpn.STOP"
         const val EXTRA_CONFIG = "config"
+
+        /** B15: signature-level permission guarding the stop receiver below API 33. */
+        const val STOP_PERMISSION = "app.derafsh.drf.permission.STOP_VPN"
+
         private const val NOTIFICATION_ID = 42
         private const val CHANNEL_ID = "drf_vpn"
         private const val TAG = "DrfVpnService"
@@ -54,8 +58,11 @@ class DrfVpnService : VpnService(), DrfPlatformInterface {
                     Context.RECEIVER_NOT_EXPORTED,
                 )
             } else {
+                // B15: on API < 33 a receiver without an explicit flag is
+                // implicitly exported; requiring our signature permission
+                // blocks other apps from silently stopping the VPN.
                 @Suppress("UnspecifiedRegisterReceiverFlag")
-                registerReceiver(stopReceiver, IntentFilter(ACTION_STOP))
+                registerReceiver(stopReceiver, IntentFilter(ACTION_STOP), STOP_PERMISSION, null)
             }
             receiverRegistered = true
         }

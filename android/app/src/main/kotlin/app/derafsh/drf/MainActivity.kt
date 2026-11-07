@@ -85,9 +85,18 @@ class MainActivity : FlutterActivity() {
         val result = pendingVpnResult
         pendingVpnResult = null
         if (resultCode == Activity.RESULT_OK) {
-            val config = VpnStateBus.pendingConfig ?: ""
-            launchVpnService(config)
-            result?.success(true)
+            if (result != null) {
+                // A live Dart caller is waiting for this exact reply.
+                val config = VpnStateBus.pendingConfig ?: ""
+                launchVpnService(config)
+                result.success(true)
+            }
+            // B14: result == null means the session that requested consent is
+            // gone (activity recreated or process died while the dialog was
+            // open — the engine, and with it the awaiting Dart isolate, died
+            // too). Starting the VPN here would race the fresh UI (which
+            // believes it is disconnected and would then double-start), so
+            // the grant is dropped; the user can connect explicitly.
         } else {
             VpnStateBus.setPhaseWithError("disconnected", "دسترسی VPN داده نشد")
             result?.success(false)

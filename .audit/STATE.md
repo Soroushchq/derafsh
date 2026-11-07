@@ -3,8 +3,8 @@
 > تنها حافظهٔ بین چرخه‌ها. هر چرخه در ابتدا این فایل را می‌خواند و در پایان به‌روز می‌کند.
 > ⚠️ هیچ «رفع شد» بدون خروجی واقعی ابزار ثبت نکن.
 
-- **چرخهٔ فعلی:** 6 (چرخهٔ بعدی که باید اجرا شود)
-- **آخرین به‌روزرسانی:** 2026-11-08 — پایان چرخهٔ ۵ (ماژول ۱۳؛ B11 رفع شد؛ ۴۲/۴۲ تست سبز)
+- **چرخهٔ فعلی:** 7 (چرخهٔ بعدی که باید اجرا شود)
+- **آخرین به‌روزرسانی:** 2026-11-08 — پایان چرخهٔ ۶ (ماژول‌های ۱۴/۱۵/۱۶؛ B12–B15 رفع شد؛ ۴۲/۴۲ تست سبز). یادداشت محیط: سندباکس ریست شد — ریپو از origin/audit/full-review (worktree در مسیر استاندارد) و SDK دوباره دانلود/نصب شد.
 - **ریپو:** https://github.com/Soroushchq/derafsh — برنچ `audit/full-review` (از main@4c4ee57 = ریلیز v1.0.0)
 - **مسیر محلی:** `/home/z/my-project/derafsh-audit`
 - **Flutter SDK:** `/home/z/my-project/sdk/flutter/bin` (اگر نبود: دانلود `flutter_linux_3.35.4-stable.tar.xz` از storage.googleapis و اکسترکت به `/home/z/my-project/sdk/`، سپس `flutter pub get` در ریپو)
@@ -62,9 +62,9 @@
 | 11 | `lib/ui/paywall_sheet.dart` | ✅ چ۴ | B9 (جواب بی‌صدای CTA وقتی launchUrl=false) رفع شد |
 | 12 | `lib/ui/update_gate.dart` + `advanced_sheet.dart` + `licenses_screen.dart` | ✅ چ۴ | B10 (ردیف گیت در diagnostics فقط ثابت محلی را می‌دید نه serverMinBuild) رفع شد؛ assets/legal موجود و در pubspec اعلام‌شده |
 | 13 | `lib/design/*` + `lib/intro/*` | ✅ چ۵ | B11 (تاج پرتو کاویانی به‌خاطر transform بدون counter-translate یک‌اندازهٔ مرکز جابه‌جا می‌شد) رفع شد؛ بقیهٔ فایل‌ها بی‌باگ (شواهد در «تأییدشده بی‌باگ») |
-| 14 | `lib/app.dart` + `lib/main.dart` | ⬜ | |
-| 15 | `android/.../vpn/*.kt` | ⬜ | |
-| 16 | `android/.../MainActivity.kt` + `DrfApplication.kt` + Manifest | ⬜ | |
+| 14 | `lib/app.dart` + `lib/main.dart` | ✅ چ۶ | بی‌باگ — شواهد در «تأییدشده بی‌باگ» |
+| 15 | `android/.../vpn/*.kt` | ✅ چ۶ | B12 (کال‌بک شبکه بدون Handler روی API<۲۸ روی main thread می‌خوابید) + B13 (بدون @Volatile روی listener/defaultNetwork) رفع شد |
+| 16 | `android/.../MainActivity.kt` + `DrfApplication.kt` + Manifest | ✅ چ۶ | B14 (launch بعد از موافقت بدون درخواست‌کنندهٔ زنده) + B15 (broadcast توقف بدون گارد امضا روی API<۳۳) رفع شد |
 | 17 | `.github/workflows/*` | ⬜ | |
 | 18 | `ios/` (Runner) | ⬜ | |
 | 19 | کیفیت تست‌های `test/*` | ⬜ | |
@@ -87,6 +87,10 @@
 | B9 | `paywall_sheet.dart` | کم | CTA پکیوال وقتی `launchUrl` مقدار false برمی‌گرداند (دستگاه بدون هندلر t.me) کاملاً بی‌صدا رد می‌شد — کاربر لمس می‌کند و هیچ‌چیز نمی‌بیند؛ فقط exception هندل شده بود | برگشت false هندل نشده بود | الگوی `update_gate._onDownload` کپی شد: `!launched → snackbar` + استخراج `_showCtaFallback` + چک `context.mounted` بعد await | `B9: CTA shows feedback...` ×۳ (false/throw/empty-bot-url) ✅ |
 | B10 | `advanced_sheet.dart` + `update_gate.dart` | کم (لتنات) | ردیف «وضعیت گیت» در پنل پیشرفته فقط `buildNumber >= minRequiredBuild` محلی را حساب می‌کرد — اگر سرور `applyServerMinBuild` بزند، diagnostics «عبور» نشان می‌داد در حالی که گیت واقعی مسدود است؛ ردیف حداقل بیلد هم مقدار مؤثر را نشان نمی‌داد | recompute محلی به‌جای منبع حقیقت | `gatePass = !MandatoryUpdateGate.isBlocked` + getter عمومی `effectiveMinBuild` (=_serverMinBuild ?? local) و نمایش آن | `B10: advanced diagnostics reflect the real update gate` ✅ |
 | B11 | `design/kaviani_star.dart` | **بالا** (چشمی) | تاج پرتوهای چرخان ستارهٔ کاویانی در همهٔ moodهای فعال (awakening/radiant) یک‌اندازهٔ مرکز (`c`) از ستاره فاصله می‌گرفت و مدار می‌زد — مسیرهای `_rayPath` حول `c` ساخته می‌شدند ولی بعد از `translate(c)+rotate(θ)` کشیده می‌شدند → موقعیت دستگاه = `c + R·c + R·dir·r`؛ در spin=0 تاج در `2c` (گوشهٔ پایین-راست) نقاشی می‌شد | تبدیل pivot بدون counter-translate روی هندسهٔ مرکز-محور | ایدیوم pivot: `translate(c) → rotate(θ) → translate(−c)` تا هندسهٔ مرکز-محور حول مرکز ستاره بچرخد؛ شیدر (در فضای محلی) دست‌نخورده ماند | تست پیکسلی `B11: ray crown is painted around the star center...` (PictureRecorder→toImage؛ قبل از رفع alpha=0 در پیکسل پرتو، بعد از رفع >0) ✅ |
+| B12 | `android/.../NetworkMonitor.kt` | کم | شاخهٔ API<۲۸ از `registerDefaultNetworkCallback(callback)` بدون Handler استفاده می‌کرد → کال‌بک‌ها روی main thread اجرا می‌شدند و `notifyListener` (حلقهٔ retry با `Thread.sleep(100)` تا ۱ ثانیه) می‌توانست UI را تا ~۱ ثانیه روی دستگاه‌های قدیمی فریز کند | فرم یک‌آرگومانی (کال‌بک روی main thread طبق مستندات ConnectivityManager) | پاس دادن `callbackHandler` (فرم ۲-آرگومانی از API ۲۴ موجود است) — هم‌تراز با شاخه‌های ۳۱/۲۸ | بازبینی کد + مستندات اندروید؛ کامپایل CI (ریلیز بعدی) — تست flutter برای کاتلین ساختاراً ممکن نیست (پیش‌نمونهٔ B5) ✅ |
+| B13 | `android/.../NetworkMonitor.kt` | کم | `listener` و `defaultNetwork` بین ترد کال‌بک، ترد worker libbox و main بدون @Volatile ردوبدل می‌شدند — JMM هیچ happens-before بین آن ترد‌ها ندارد؛ خواندن کهنه = ازدست‌رفتن آپدیت اولیهٔ اینترفیس | همان ریشهٔ B5 | `@Volatile` روی هر دو فیلد | بازبینی کد (الگوی پذیرفته‌شدهٔ B5)؛ کامپایل CI ✅ |
+| B14 | `android/.../MainActivity.kt` | کم (لبه‌ای) | در `onActivityResult` مسیر RESULT_OK بدون چک `pendingVpnResult != null` سرویس را استارت می‌زد — اگر اکتیویتی حین دیالوگ رضایت بازسازی/کرش می‌کرد، Dart-isolate قبلی مرده بود و VPN بدون درخواست‌کنندهٔ زنده بالا می‌آمد؛ UI تازه «قطع» را نشان می‌داد در حالی که تونل فعال بود (ناهمگونی state → مسیر double-start در `BoxCore.startService` هم باز می‌شد)؛ `_onNativeState` رویداد connected غیرمنتظره را نادیده می‌گیرد (return زودهنگام) پس همگام نمی‌شد | نتیجهٔ pending فقط در فیلد اکتیویتی نگه داشته می‌شود و null بودنش معنای «درخواست‌کنندهٔ مرده» را دارد | استارت سرویس و reply به `result != null` گارد شد؛ درخواست‌کنندهٔ مرده → رضایت drop می‌شود تا UI تازه با native همگون بماند و کاربر صریح وصل شود | بازبینی کد + چرخهٔ حیات FlutterActivity (engine با host نابود می‌شود)؛ کامپایل CI ✅ |
+| B15 | `android/.../DrfVpnService.kt` + Manifest | کم | گیرندهٔ broadcast توقف روی API<۳۳ بدون RECEIVER_NOT_EXPORTED/permission ثبت می‌شد → هر اپی می‌توانست `app.derafsh.drf.vpn.STOP` را پخش کند و VPN را بی‌صدا ببندد (DoS آزاردهنده؛ روی ۳۳+ بسته بود) | ثبت implicit-export در API قدیمی | permission سفیدسطح امضا `app.derafsh.drf.permission.STOP_VPN` (protectionLevel=signature در Manifest + uses-permission) و ثبت گیرنده در شاخهٔ <۳۳ با فرم ۴-آرگومانی `registerReceiver(..., STOP_PERMISSION, null)` | بازبینی کد + مستندات اندروید (امضای خودِ اپ همیشه پاس می‌شود)؛ کامپایل CI ✅ |
 
 ### باز
 | ID | فایل | شرح | تلاش‌ها | دلیل بازماندن |
@@ -111,6 +115,12 @@
 - `sparks.dart` (چ۵): پارامترها per-particle با `Random(i·7919)` قطعی‌اند؛ alpha = `sin(t·π).clamp(0,1)` هرگز از ۱ نمی‌گذرد؛ مسیر صعودی (y معکوس + drift بالا) عمدی است. یادداشت: `shouldRepaint` فقط `progress` را مقایسه می‌کند (نه `count`) — تک‌call-site با count ثابت (26)؛ اگر در آینده count داینامیک شود باید اضافه شود (observation، نه باگ).
 - `stagger_in.dart` (چ۵): presentational خالص؛ opacity با clamp گارد شده؛ تأخیر per-index فقط duration را بلند می‌کند؛ child به TweenAnimationBuilder پاس داده می‌شود (بازسازی ارزان).
 - `intro.dart` (چ۵): status-listener فقط در completed `onDone` می‌زند و با dispose کنترلر جدا می‌شود (پس از unmount فراخوانی نمی‌شود)؛ skip با tap کار می‌کند؛ همهٔ sub-progressها با `.clamp(0,1)` گارد شده‌اند؛ overshoot عمدی easeOutBack در `unfold` بی‌خطر است (alpha ها را موتور کلمپ می‌کند؛ مقدار نهایی دقیقاً ۱)؛ `HaloPaint` حول مرکز و بدون transform مشکل‌ساز است و shouldRepaint هر دو فیلد را می‌پوشاند.
+- `app.dart` (چ۶): تک state `_introDone` است و setState فقط از onDone (خارج از build) می‌آید؛ intro روی Stack به‌عنوان overlay است و با setState برداشته می‌شود؛ `child ??` گارد builder استاندارد MaterialApp است؛ RTL با builder دور navigator — بدون listener/منبع قابل‌نشت.
+- `main.dart` (چ۶): `ensureInitialized` قبل از هر کال channel؛ `RuntimeConfig.refresh` با unawaited (هرگز throw نمی‌کند و client را می‌بندد — B8)؛ `SourceCatalog.load` در try/catch → `empty()` (مسیر طراحی‌شدهٔ B7 که connect() با EngineException می‌پوشاند)؛ `_pickEngine` بر اساس پلتفرم با پیام صریح UnsupportedEngine؛ بدون state global/استریم/کنترلری که نشت کند.
+- `BoxCore.kt` (چ۶): الگوی دو-بررسی `stopRequested` (بعد از assign و بعد از startOrReloadService) مسیرهای توقف حین استارت را می‌بندد؛ closeTun در همهٔ مسیرهای خطا/توقف صدا زده می‌شود؛ closeServer هم closeService هم close را با runCatching می‌پوشاند. **مشاهدهٔ deferred (باگ قابل‌اثبات در جریان فعلی نیست):** `startService` گارد «استارت روی نمونهٔ فعال» ندارد؛ تنها call-site آن onStartCommand است که از سمت Dart با گارد فاز connect() و (بعد از B14) گارد درخواست‌کنندهٔ زنده محافظت می‌شود — اگر در آینده مسیر استارت دوم باز شود باید سخت‌گیرانه‌تر شود.
+- `VpnStateBus.kt` (چ۶): `sink` فقط روی main thread لمس می‌شود (setSink از EventChannel روی main، emit هم روی main.post) → thread-confined؛ `phase/error/pendingConfig` همه @Volatile؛ emit برای sink خالی بی‌اثر.
+- `DrfPlatformInterface.kt` (چ۶): متدهای پشتیبانی‌نشده به‌صورت صریح error() می‌دهند (fail-closed)؛ `getInterfaces` با fallback های runCatching/firstOrNull می‌سازد. **مشاهدهٔ تاییدشده بی‌اثر:** `StringArray.len() = 0` — سورس sing-box v1.14.4 (کلون محلی /tmp/singbox) نشان می‌دهد مصرف‌کنندهٔ Go همه‌جا `iteratorToArray` است که فقط `HasNext/Next` می‌خواند؛ تنها `.Len()`های libbox روی تایپ‌های دیگرند → در نسخهٔ پین‌شده بی‌اثر؛ اگر libbox ارتقا یافت باید len درست شود (یادداشت دیده‌بان).
+- **`NetworkMonitor.kt` یادداشت (باگ نیست):** HandlerThread اختصاصی `drf-net-callback` در stop() quit نمی‌شود (۱ ترد بیکار تا مرگ پروسه، singleton پردازه‌ای) — بازسازی handler بعد از quit نیاز به تغییر ساختاری دارد و سود عملی ندارد؛ ثبت شد تا اگر مدل lifecycle عوض شد revisited شود.
 
 ## تصمیم‌ها (با دلیل)
 - **D4:** رفع B2 در خود engine انجام شد (نه UI) — هر مصرف‌کنندهٔ آیندهٔ engine همین رفتار را می‌گیرد؛ کنترلر فقط سیاست را اعمال می‌کند.
@@ -126,6 +136,9 @@
 - **D11 (چ۴):** `url_launcher_platform_interface` به‌عنوان **dev dependency** اعلام شد (flutter pub add --dev) — از قبل وابستگی transitive قفل‌شدهٔ url_launcher بود؛ هیچ پکیج جدیدی به درخت اضافه نشد و فقط lint `depend_on_referenced_packages` در تست B9 را برطرف می‌کند (سطح رسمی mock کردن url_launcher).
 - **D12 (چ۴):** getter عمومی `MandatoryUpdateGate.effectiveMinBuild` اضافه شد (منبع حقیقت گیت) تا diagnostics بدون دسترسی به فیلد خصوصی `_serverMinBuild` مقدار واقعی را نشان دهد؛ رفتار `isBlocked` از نظر منطقی دست‌نخورده ماند.
 - **D13 (چ۵):** رفع B11 با ایدیوم pivot (`translate(c)→rotate→translate(−c)`) انجام شد نه بازنویسی هندسه به مبدا-محور — کمترین diff و شیدر/گرادیان‌ها (که در فضای محلیِ همان مختصات‌ها ساخته می‌شوند) بدون تغییر معتبر می‌مانند. روش اثبات: تست پیکسلی با PictureRecorder→toImage→rawRgba (بدون وابستگی جدید؛ golden/goldenFile متکی به платفروم نیست) — «پیکسل پرتو باید رنگ داشته باشد» قبل از رفع قرمز و بعد از رفع سبز.
+- **D14 (چ۶):** برای باگ‌های کاتلین/منیفست (B12–B15) تست flutter ساختاراً ممکن نیست (بدون Android SDK/Robolectric محلی و ممنوعیت وابستگی جدید) — همان پیش‌نمونهٔ B5: شواهد = بازبینی دقیق + ارجاع به مستندات اندروید/چرخهٔ حیات Flutter + کامپایل CI در ریلیز بعدی؛ گیت Dart (analyze/test) برای اطمینان از سالم‌ماندن سمت Dart اجرا و سبز ماند.
+- **D15 (چ۶):** رفع B14 به‌جای «معتبرکردن reply پس از بازسازی»، استارت را روی درخواست‌کنندهٔ زنده گارد کرد — پاسخ‌دادن به Result یک engine مرده نامعتبر است و استارت‌نکردن، native و UI تازه را همگون نگه می‌دارد (کاربر دوباره وصل می‌شود)؛ مسیر denial دست نخورد.
+- **D16 (چ۶):** رفع B15 با permission سطح-امضا (نه سوییچ به startService) — چون auto-disconnect سهمیه در بک‌گراند از broadcast استفاده می‌کند و startService در بک‌گراند روی API ۲۶+ IllegalStateException می‌دهد؛ permission امضا برای خودِ اپ همیشه پاس می‌شود و برای دیگران غیرممکن است.
 
 ## baseline (چرخهٔ ۱ — ثبت‌شده)
 - `flutter analyze` (قبل از تغییرات): `No issues found!`
@@ -140,6 +153,8 @@
 - `flutter test` (پس از چ۴): **۴۱/۴۱ پاس** (۴ تست جدید: B9×۳، B10×۱ — `All tests passed!`)
 - `flutter analyze` (پس از چ۵): `No issues found!` (۱.۵s)
 - `flutter test` (پس از چ۵): **۴۲/۴۲ پاس** (۱ تست جدید: B11 — `All tests passed!`)
+- `flutter analyze` (پس از چ۶): `No issues found!` (۱۵.۱s — سرد بعد از نصب مجدد SDK)
+- `flutter test` (پس از چ۶): **۴۲/۴۲ پاس** (`All tests passed!`)
 
 ## تلاش‌های ناموفق (bug → تعداد تلاش)
 - B10-تست → ۳ تلاش (خودِ رفع B9/B10 از اول سبز بود؛ این‌ها نوسان نوشتن تست بود): ۱) `find.text('1')` دو match داشت (ردیف بیلد و ردیف حداقل‌بیلد) → `findsNWidgets(2)`؛ ۲) تغییر static بدون dirty کردن درخت rebuild نمی‌شود → به‌جای `pump()` از `pumpWidget` مجدد؛ ۳) سبز.

@@ -16,7 +16,13 @@ import java.net.NetworkInterface
 object NetworkMonitor {
     private const val TAG = "NetworkMonitor"
 
+    // B13: written from the callback-handler thread (and the libbox worker
+    // thread via setListener) and read from the others — JMM has no
+    // happens-before edge between those threads (same class as B5).
+    @Volatile
     private var listener: InterfaceUpdateListener? = null
+
+    @Volatile
     private var defaultNetwork: Network? = null
     private var registered = false
 
@@ -58,8 +64,11 @@ object NetworkMonitor {
                 Build.VERSION.SDK_INT >= 28 ->
                     cm.requestNetwork(request, callback, callbackHandler)
                 else ->
+                    // B12: without an explicit handler the callbacks (and the
+                    // up-to-1s sleep loop in notifyListener) would run on the
+                    // application MAIN thread — a UI freeze on API 24–27.
                     @Suppress("DEPRECATION")
-                    cm.registerDefaultNetworkCallback(callback)
+                    cm.registerDefaultNetworkCallback(callback, callbackHandler)
             }
             registered = true
         } catch (e: Exception) {
