@@ -27,9 +27,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install gomobile
+      - name: Install gomobile (sagernet fork, matches sing-box release build)
         run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+          go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.13
           $(go env GOPATH)/bin/gomobile init
 
       - name: Locate Android NDK
@@ -46,8 +47,6 @@ jobs:
         run: |
           git clone --depth 1 --branch v1.14.4 https://github.com/SagerNet/sing-box.git
           cd sing-box
-          # gomobile (>=0.2.x) requires x/mobile inside the module graph
-          go get golang.org/x/mobile@latest
           go mod download
 
       - name: Build libbox AAR
@@ -57,8 +56,11 @@ jobs:
             -o ../libbox.aar \
             -target android \
             -androidapi 24 \
-            -ldflags='-s -w -buildid=' \
-            -tags 'with_gvisor,with_quic,with_utls' \
+            -javapkg=io.nekohasekai \
+            -libname=box \
+            -trimpath -buildvcs=false \
+            -ldflags='-s -w -buildid= -X github.com/sagernet/sing-box/constant.Version=v1.14.4 -X runtime.godebugDefault=multipathtcp=0,tlssha1=1 -checklinkname=0' \
+            -tags 'with_gvisor,with_quic,with_utls,badlinkname,tfogo_checklinkname0' \
             ./experimental/libbox
 
       - name: Upload libbox artifact
