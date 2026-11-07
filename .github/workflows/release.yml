@@ -51,7 +51,7 @@ jobs:
         run: |
           $(go env GOPATH)/bin/gomobile bind -v \
             -o ../libbox.aar \
-            -target='android/arm,android/arm64,android/x86_64' \
+            -target android \
             -androidapi 24 \
             -androidx \
             -ldflags='-s -w -buildid=' \
