@@ -44,6 +44,8 @@ jobs:
         run: |
           git clone --depth 1 --branch v1.14.4 https://github.com/SagerNet/sing-box.git
           cd sing-box
+          # gomobile (>=0.2.x) requires x/mobile inside the module graph
+          go get golang.org/x/mobile@latest
           go mod download
 
       - name: Build libbox AAR
