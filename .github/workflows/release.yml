@@ -17,7 +17,9 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26.x'
+          # sing-box v1.14.4 uses go:linkname against os.checkPidfdOnce which
+          # only resolves on the go 1.25.x toolchain (see its go.mod: 1.25.5)
+          go-version: '1.25.5'
 
       - name: Setup Java (gomobile needs it)
         uses: actions/setup-java@v4
