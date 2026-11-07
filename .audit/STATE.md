@@ -3,8 +3,8 @@
 > تنها حافظهٔ بین چرخه‌ها. هر چرخه در ابتدا این فایل را می‌خواند و در پایان به‌روز می‌کند.
 > ⚠️ هیچ «رفع شد» بدون خروجی واقعی ابزار ثبت نکن.
 
-- **چرخهٔ فعلی:** 2 (چرخهٔ بعدی که باید اجرا شود)
-- **آخرین به‌روزرسانی:** 2026-11-07 — پایان چرخهٔ ۱ (۴ باگ رفع‌شده + ۱ race کوتلین؛ ۲۷/۲۷ تست)
+- **چرخهٔ فعلی:** 3 (چرخهٔ بعدی که باید اجرا شود)
+- **آخرین به‌روزرسانی:** 2026-11-07 — پایان چرخهٔ ۲ (۲ باگ پارسر رفع شد؛ ۳۰/۳۰ تست سبز؛ شرط توقف به «فقط تمام‌شدن همهٔ فایل‌ها» تغییر کرد — D7)
 - **ریپو:** https://github.com/Soroushchq/derafsh — برنچ `audit/full-review` (از main@4c4ee57 = ریلیز v1.0.0)
 - **مسیر محلی:** `/home/z/my-project/derafsh-audit`
 - **Flutter SDK:** `/home/z/my-project/sdk/flutter/bin` (اگر نبود: دانلود `flutter_linux_3.35.4-stable.tar.xz` از storage.googleapis و اکسترکت به `/home/z/my-project/sdk/`، سپس `flutter pub get` در ریپو)
@@ -26,9 +26,9 @@
 10. `.audit/LOCK` حذف.
 11. خلاصهٔ فارسی کوتاه: پیدا شد / رفع شد / باز ماند / چرخهٔ بعد.
 
-### شرط توقف (کرون‌جاب حذف شود)
-- همهٔ ماژول‌ها ✅ **و** دو چرخهٔ پیاپی بدون باگ جدید → `FINAL_REPORT.md` بنویس، با ابزار cron لیست کن و job «derafsh-audit-cycle» را delete کن، commit+push، LOCK حذف، تمام.
-- ۳ چرخهٔ پیاپی بدون پیشرفت یا چرخهٔ ۴۰ → گزارش وضعیت + دلیل، حذف کرون‌جاب، تمام.
+### شرط توقف (کرون‌جاب حذف شود) — نسخهٔ نهایی به‌دستور کاربر (2026-11-07)
+- **تنها شرط توقف:** کار همهٔ فایل‌ها تمام شده باشد — یعنی همهٔ ماژول‌های جدول ✅ شده باشند، همهٔ باگ‌های یافت‌شده رفع یا صریحاً بسته شده باشند، `flutter analyze` و `flutter test` سبز باشند و `FINAL_REPORT.md` نوشته شده باشد. آن‌وقت: با ابزار cron لیست کن و job «derafsh-audit-cycle» را delete کن، commit+push، LOCK حذف، تمام.
+- **حذف شد:** شرط «دو چرخهٔ پیاپی بدون باگ» و سقف «۴۰ چرخه» و شرط «۳ چرخهٔ بی‌پیشرفت» — دیگر توقف‌زا نیستند. اگر چرخه‌ای پیشرفت نداشت، ادامه بده و در STATE ثبت کن (D7).
 
 ### ممنوعیت‌ها
 - بدون `git push --force` / بازنویسی تاریخچه / حذف برنچ.
@@ -53,8 +53,8 @@
 | 2 | `lib/engine/libbox_engine.dart` + `vpn_engine.dart` | ✅ چ۱ | B2: ناظر دائمی رویداد native + رابط `stateEvents`؛ handshake start جدا نگه داشته شد |
 | 3 | `lib/data/usage_ledger.dart` | ✅ چ۱ | بی‌باگ — prune/merge/persist درست (پوشش تست چ۱) |
 | 4 | `lib/data/node_resolver.dart` | ✅ چ۱ | B3: `dispose()` برای بستن http.Client؛ failover درست |
-| 5 | `lib/data/link_parser.dart` | ⬜ | |
-| 6 | `lib/data/config_builder.dart` | ⬜ | |
+| 5 | `lib/data/link_parser.dart` | ✅ چ۲ | C1 (vmess grpc service_name از path جا مانده بود) + C2 (پلاگین obfs ss نادیده گرفته می‌شد) رفع شد؛ پورت عددی int پوشش تست شد |
+| 6 | `lib/data/config_builder.dart` | ✅ چ۲ | بی‌باگ — تست ساختاری 1.14 موجود (address/sniff/dns جدید/no block-outbound) + plugin/passthrough بررسی شد |
 | 7 | `lib/data/drf_source.dart` | ⬜ | |
 | 8 | `lib/data/remote_config.dart` | ⬜ | |
 | 9 | `lib/core/*` (config/strings/persian/theme) | ⬜ | |
@@ -80,6 +80,8 @@
 | B3 | `node_resolver.dart` | کم | http.Client هرگز close نمی‌شد | بدون lifecycle | `dispose()` عمومی | `B3: dispose closes the underlying http client` ✅ |
 | B6 | `vpn_controller.dart` + `main.dart` مسیر | متوسط | بعد از ری‌استارت اپ، نوار «زمان رایگان» ۳۰ دقیقهٔ کامل نشان می‌داد حتی اگر ۲۰ دقیقه مصرف شده بود | ledger فقط داخل connect() لود می‌شد | `_initLedger()` async در constructor (unawaited) + `_safeNotify` | `B6: freeRemaining is initialized from the persisted ledger` ✅ |
 | B5 | `BoxCore.kt` | متوسط | race visibility: `commandServer`/`fileDescriptor` بین ترد worker و main بدون happens-before | بدون @Volatile | `@Volatile` روی هر دو فیلد | اعتبارسنجی کامپایل با CI (ریلیز بعدی)؛ تست‌پذیر در vmesis ندارد — ثبت کدبازبینی |
+| C1 | `link_parser.dart` | متوسط | vmess با `net=grpc` بدون service_name ساخته می‌شد → نودهای grpc به سرورهای با مسیر نامدار وصل نمی‌شدند | قرارداد v2rayNG: نام سرویس grpc در فیلد `path` JSON است اما پارسر serviceName را خالی می‌فرستاد | `serviceName: net=='grpc' ? json['path'] : ''` | `C1: vmess grpc takes service name from path` ✅ |
+| C2 | `link_parser.dart` | متوسط | لینک‌های ss با پلاگین obfs-local/v2ray-plugin فیلدهای plugin/plugin_opts را از دست می‌دادند → نود بدون obfs می‌ساخت و وصل نمی‌شد | SIP002 plugin در query بود ولی خوانده نمی‌شد | نگاشت plugin (simple-obfs→obfs-local) + plugin_opts در `_buildSsNode`؛ پلاگین ناشناخته بی‌صدا drop می‌شود (node سالم می‌ماند) | `C2: ss SIP002 plugin...` و `C2: unknown ss plugin...` ✅ |
 
 ### باز
 | ID | فایل | شرح | تلاش‌ها | دلیل بازماندن |
@@ -94,6 +96,8 @@
 - **D4:** رفع B2 در خود engine انجام شد (نه UI) — هر مصرف‌کنندهٔ آیندهٔ engine همین رفتار را می‌گیرد؛ کنترلر فقط سیاست را اعمال می‌کند.
 - **D5:** برای B6 از `_initLedger` غیرمسدودساز در constructor استفاده شد (نه await در main) — تا startup روی شبکه/دیسک کند متوقف نشود؛ UI با `_safeNotify` بعد از لود به‌روز می‌شود.
 - **D6:** `debugTick()` با `@visibleForTesting` به‌جای ابزار mock — بدون وابستگی جدید.
+- **D7 (دستور کاربر):** تنها شرط توقف = «تمام‌شدن کار همهٔ فایل‌ها»؛ شرط‌های قبلی (بی‌پیشرفت/سقف چرخه) حذف شدند.
+- **D8:** پلاگین ناشناختهٔ ss (مثل shadowtls) drop می‌شود اما نود می‌ماند — sing-box v1.14 فقط obfs-local/v2ray-plugin دارد؛ ساختن نودِ قطعاً خراب بهتر از حذف کامل نیست ولی از شکست کل سورس بهتر است.
 - **D1:** قفل کهنه (>۲۵ دقیقه) توسط چرخهٔ بعد شکسته می‌شود — وگرنه یک کرش کل ممیزی را می‌خواباند.
 - **D2:** `.audit/STATE.md` و `FINAL_REPORT.md` داخل ریپو کامیت می‌شوند (ردیابی + بقا بین سندباکس‌ها)؛ LOCK فقط محلی و هرگز کامیت نمی‌شود.
 - **D3:** تست‌های جدید فقط با `flutter test` — بدون وابستگی جدید مگر اجبار (با ثبت دلیل).
@@ -102,7 +106,9 @@
 - `flutter analyze` (قبل از تغییرات): `No issues found!`
 - `flutter test` (قبل از تغییرات): **۲۲/۲۲ پاس**
 - `flutter analyze` (پس از رفع‌ها): `No issues found!`
-- `flutter test` (پس از رفع‌ها): **۲۷/۲۷ پاس** (۵ تست جدید: B1، B2×۲، B3، B6)
+- `flutter test` (پس از رفع‌های چ۱): **۲۷/۲۷ پاس** (۵ تست جدید)
+- `flutter analyze` (پس از چ۲): `No issues found!`
+- `flutter test` (پس از چ۲): **۳۰/۳۰ پاس** (۳ تست جدید: C1، C2×۲)
 
 ## تلاش‌های ناموفق (bug → تعداد تلاش)
 - —

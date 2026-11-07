@@ -134,11 +134,14 @@ class LinkParser {
       }
       outbound['tls'] = tls;
     }
+    final net = '${json['net'] ?? ''}';
+    // C1 fix: for vmess+grpc the service name is stored in `path`.
     final transport = _buildTransport(
-      net: '${json['net'] ?? ''}',
+      net: net,
       type: '${json['type'] ?? ''}',
       host: '${json['host'] ?? ''}',
       path: '${json['path'] ?? ''}',
+      serviceName: net == 'grpc' ? '${json['path'] ?? ''}' : '',
     );
     if (transport != null) outbound['transport'] = transport;
     node.outbound = outbound;
@@ -277,6 +280,7 @@ class LinkParser {
           uri.host,
           uri.port,
           fragment,
+          plugin: uri.queryParameters['plugin'] ?? '',
         );
       }
     }
@@ -304,8 +308,9 @@ class LinkParser {
     String password,
     String host,
     int port,
-    String fragment,
-  ) {
+    String fragment, {
+    String plugin = '',
+  }) {
     final node = DrfNode(
       type: 'shadowsocks',
       tag: _cleanTag(fragment) ?? 'ss',
@@ -320,6 +325,22 @@ class LinkParser {
       'method': method,
       'password': password,
     };
+    // C2 fix: SIP002 plugin (obfs-local / v2ray-plugin) was silently dropped,
+    // producing nodes that cannot connect to obfuscated servers.
+    if (plugin.isNotEmpty) {
+      final sep = plugin.indexOf(';');
+      final rawName = sep > 0 ? plugin.substring(0, sep) : plugin;
+      final opts = sep > 0 ? plugin.substring(sep + 1) : '';
+      final name = switch (rawName) {
+        'simple-obfs' => 'obfs-local',
+        'obfs-local' || 'v2ray-plugin' => rawName,
+        _ => '', // unsupported plugin: keep the node but without a plugin
+      };
+      if (name.isNotEmpty) {
+        node.outbound['plugin'] = name;
+        if (opts.isNotEmpty) node.outbound['plugin_opts'] = opts;
+      }
+    }
     return node;
   }
 

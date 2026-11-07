@@ -118,6 +118,50 @@ void main() {
     });
   });
 
+  group('LinkParser · audit cycle 2', () {
+    test('C1: vmess grpc takes service name from path', () {
+      final json = jsonEncode({
+        'v': '2',
+        'ps': 'grpcNode',
+        'add': 'g.example.com',
+        'port': 443, // numeric port (int) in JSON — must parse too
+        'id': 'b831381d-6324-4d53-ad4f-8cda48b30811',
+        'aid': 0,
+        'net': 'grpc',
+        'path': 'grpcServiceName',
+        'tls': 'tls',
+        'sni': 'g.example.com',
+      });
+      final link = 'vmess://${base64.encode(utf8.encode(json))}';
+      final node = LinkParser.parseLink(link);
+      expect(node, isNotNull);
+      final transport = node!.outbound['transport'] as Map<String, dynamic>;
+      expect(transport['type'], 'grpc');
+      expect(transport['service_name'], 'grpcServiceName');
+    });
+
+    test('C2: ss SIP002 plugin obfs-local maps to sing-box plugin fields',
+        () {
+      final userinfo = base64.encode(utf8.encode('aes-256-gcm:pw'));
+      final link = 'ss://$userinfo@4.4.4.4:8388'
+          '?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dcdn.example.com'
+          '#obfsNode';
+      final node = LinkParser.parseLink(link);
+      expect(node, isNotNull);
+      final o = node!.outbound;
+      expect(o['plugin'], 'obfs-local');
+      expect(o['plugin_opts'], contains('obfs-host=cdn.example.com'));
+    });
+
+    test('C2: unknown ss plugin is dropped, node still parses', () {
+      final userinfo = base64.encode(utf8.encode('aes-256-gcm:pw'));
+      final link = 'ss://$userinfo@4.4.4.4:8388?plugin=shadowtls#x';
+      final node = LinkParser.parseLink(link);
+      expect(node, isNotNull);
+      expect(node!.outbound.containsKey('plugin'), isFalse);
+    });
+  });
+
   group('LinkParser · hysteria2', () {
     test('parses hy2 link', () {
       final node = LinkParser.parseLink(
