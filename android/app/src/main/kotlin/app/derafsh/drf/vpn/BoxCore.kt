@@ -19,8 +19,14 @@ class BoxCore(
         private const val TAG = "BoxCore"
     }
 
+    // set by libbox (openTun, internal thread) and closed from stop paths —
+    // same cross-thread visibility concern as commandServer.
+    @Volatile
     var fileDescriptor: ParcelFileDescriptor? = null
 
+    // B5 fix: written on the worker thread, read from stop paths on other
+    // threads — needs a visibility guarantee (JMM has no happens-before here).
+    @Volatile
     private var commandServer: CommandServer? = null
 
     @Volatile

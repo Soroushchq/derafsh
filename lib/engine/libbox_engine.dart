@@ -15,13 +15,17 @@ import 'package:flutter/services.dart';
 import 'vpn_engine.dart';
 
 class LibboxVpnEngine implements VpnEngine {
-  LibboxVpnEngine();
+  LibboxVpnEngine() {
+    // Permanent observer (B2 fix): native state changes must be recorded for
+    // the whole app lifetime, not only while start() is waiting — otherwise a
+    // tunnel that dies mid-session is never reported upward.
+    events.listen(_record);
+  }
 
   static const MethodChannel _channel = MethodChannel('app.derafsh.drf/vpn');
   static const EventChannel _events = EventChannel('app.derafsh.drf/vpn/events');
 
-  Stream<Map<Object?, Object?>>? _stateStream;
-  StreamSubscription<dynamic>? _subscription;
+  Stream<Map<Object?, Object?>>? _broadcast;
 
   String _lastState = 'disconnected';
   String? _lastError;
@@ -33,18 +37,38 @@ class LibboxVpnEngine implements VpnEngine {
   /// Values: connecting | connected | disconnected
   String get lastNativeState => _lastState;
 
+  /// Latest native error text, if any.
+  String? get lastError => _lastError;
+
+  void _record(Map<Object?, Object?> event) {
+    final state = '${event['state'] ?? ''}';
+    if (state.isNotEmpty) _lastState = state;
+    final error = event['error'];
+    if (error != null && '$error'.isNotEmpty) _lastError = '$error';
+  }
+
+  /// Broadcast stream of native state maps (single cached instance).
+  Stream<Map<Object?, Object?>> get events {
+    _broadcast ??= _events
+        .receiveBroadcastStream()
+        .map((event) => event is Map
+            ? Map<Object?, Object?>.from(event)
+            : <Object?, Object?>{'state': 'disconnected'});
+    return _broadcast!;
+  }
+
+  @override
+  Stream<Map<Object?, Object?>>? get stateEvents => events;
+
   @override
   Future<void> start(String config) async {
     _lastError = null;
-    // Start listening before launching the service so no event is missed.
+    // Wait for the native "connected" (or failure) event. The permanent
+    // constructor listener keeps recording; this temp listener completes the
+    // start handshake.
     final connected = Completer<bool>();
-    _subscription?.cancel();
-    _subscription = stateStream.listen((event) {
+    final sub = events.listen((event) {
       final state = '${event['state'] ?? ''}';
-      final error = event['error'];
-      if (error != null && '$error'.isNotEmpty) {
-        _lastError = '$error';
-      }
       if (state == 'connected' && !connected.isCompleted) {
         connected.complete(true);
       } else if (state == 'disconnected' &&
@@ -60,8 +84,7 @@ class LibboxVpnEngine implements VpnEngine {
         throw EngineException(_lastError ?? 'دسترسی VPN داده نشد.');
       }
     } on PlatformException catch (e) {
-      await _subscription?.cancel();
-      _subscription = null;
+      await sub.cancel();
       throw EngineException(e.message ?? 'شروع موتور ناموفق بود.');
     }
 
@@ -70,8 +93,7 @@ class LibboxVpnEngine implements VpnEngine {
     });
     final success = await connected.future;
     timer.cancel();
-    await _subscription?.cancel();
-    _subscription = null;
+    await sub.cancel();
     if (!success) {
       throw EngineException(_lastError ?? 'اتصال ناموفق بود.');
     }
@@ -84,20 +106,5 @@ class LibboxVpnEngine implements VpnEngine {
     } on PlatformException catch (e) {
       throw EngineException(e.message ?? 'توقف موتور ناموفق بود.');
     }
-  }
-
-  /// Broadcast stream of native state maps.
-  Stream<Map<Object?, Object?>> get stateStream {
-    _stateStream ??= _events
-        .receiveBroadcastStream()
-        .map((event) => event is Map
-            ? Map<Object?, Object?>.from(event)
-            : <Object?, Object?>{'state': 'disconnected'})
-        .map((event) {
-      final state = '${event['state'] ?? ''}';
-      if (state.isNotEmpty) _lastState = state;
-      return event;
-    });
-    return _stateStream!;
   }
 }

@@ -36,6 +36,10 @@ class SingBoxNodeResolver implements NodeResolver {
   final http.Client _client;
   final Duration timeout;
 
+  /// Closes the underlying HTTP client (app teardown / tests).
+  /// B3 fix: the client was never closed, leaking sockets on teardown.
+  void dispose() => _client.close();
+
   @override
   Future<ResolvedNode> resolve(
     String sourceUrl, {

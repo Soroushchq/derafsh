@@ -17,6 +17,14 @@ abstract class VpnEngine {
   /// Short human-readable label (shown in the hidden Advanced sheet).
   String get label;
 
+  /// Live state events pushed by the native side, or null when the engine
+  /// cannot provide them (e.g. the stub used in tests).
+  ///
+  /// Each event is a map like `{'state': 'connecting|connected|disconnected',
+  /// 'error': String?}`. Consumers (the controller) must subscribe once and
+  /// keep listening — the tunnel can die at any time, not only during start.
+  Stream<Map<Object?, Object?>>? get stateEvents => null;
+
   /// Brings the tunnel up with the given sing-box config JSON.
   /// Throws [EngineException] on failure.
   Future<void> start(String config);
@@ -37,6 +45,9 @@ class StubVpnEngine implements VpnEngine {
   final Duration connectDelay;
   final Duration stopDelay;
   bool failConnect;
+
+  @override
+  Stream<Map<Object?, Object?>>? get stateEvents => null;
 
   @override
   String get label => 'استاب نمایشی (تست)';
@@ -61,6 +72,9 @@ class UnsupportedEngine implements VpnEngine {
   UnsupportedEngine(this.reason);
 
   final String reason;
+
+  @override
+  Stream<Map<Object?, Object?>>? get stateEvents => null;
 
   @override
   String get label => 'فعال نیست — $reason';

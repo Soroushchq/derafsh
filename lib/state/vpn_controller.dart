@@ -24,7 +24,17 @@ class VpnController extends ChangeNotifier {
     UsageLedger? ledger,
   })  : _premium = premium,
         ledger = ledger ?? UsageLedger(),
-        freeRemaining = freeLimit;
+        freeRemaining = freeLimit {
+    // B6 fix: load the persisted rolling-window usage immediately so the
+    // usage strip and the connect gate reflect reality from app start.
+    unawaited(_initLedger());
+    // B2 fix: keep listening to native state for the whole app lifetime so a
+    // tunnel that dies mid-session is reflected in the UI and the quota.
+    final events = engine.stateEvents;
+    if (events != null) {
+      _engineEventsSub = events.listen(_onNativeState);
+    }
+  }
 
   final VpnEngine engine;
   final SourceCatalog catalog;
@@ -45,6 +55,7 @@ class VpnController extends ChangeNotifier {
   Timer? _ticker;
   int _unsavedSeconds = 0;
   bool _ledgerReady = false;
+  StreamSubscription<Map<Object?, Object?>>? _engineEventsSub;
 
   VpnPhase get phase => _phase;
   bool get premium => _premium;
@@ -60,13 +71,13 @@ class VpnController extends ChangeNotifier {
     if (_premium == value) return;
     _premium = value;
     if (_premium) freeRemaining = freeLimit;
-    notifyListeners();
+    _safeNotify();
   }
 
   void selectSource(int index) {
     if (index == _selectedSource) return;
     _selectedSource = index;
-    notifyListeners();
+    _safeNotify();
   }
 
   /// The source this controller would connect to right now.
@@ -77,7 +88,7 @@ class VpnController extends ChangeNotifier {
     if (isBusy || _phase == VpnPhase.connected) return;
     if (!_premium && freeRemaining <= Duration.zero) {
       _timedOutLastSession = true;
-      notifyListeners();
+      _safeNotify();
       return;
     }
     hasError = false;
@@ -95,7 +106,7 @@ class VpnController extends ChangeNotifier {
         if (!_premium && freeRemaining <= Duration.zero) {
           _setPhase(VpnPhase.disconnected);
           _timedOutLastSession = true;
-          notifyListeners();
+          _safeNotify();
           return;
         }
       }
@@ -136,6 +147,8 @@ class VpnController extends ChangeNotifier {
   Future<void> disconnect({bool timedOut = false}) async {
     if (_phase != VpnPhase.connected && _phase != VpnPhase.connecting) return;
     _stopTicker();
+    // B1 fix: flush whatever the 5-second batching had not saved yet.
+    await _flushPending();
     _setPhase(VpnPhase.disconnecting);
     try {
       await engine.stop();
@@ -146,6 +159,53 @@ class VpnController extends ChangeNotifier {
       _setPhase(VpnPhase.disconnected);
     }
   }
+
+  /// Writes the pending (0–4s) usage batch into the ledger.
+  Future<void> _flushPending() async {
+    final batch = _unsavedSeconds;
+    if (batch <= 0) return;
+    _unsavedSeconds = 0;
+    await ledger.addSeconds(batch);
+    _syncFreeRemaining();
+  }
+
+  /// Handles native state events for the whole app lifetime.
+  void _onNativeState(Map<Object?, Object?> event) {
+    final state = '${event['state'] ?? ''}';
+    final error = event['error'];
+    final errMsg = (error == null || '$error'.isEmpty) ? null : '$error';
+    if (state != 'disconnected') return;
+    if (_phase == VpnPhase.connected) {
+      // Unexpected native drop: the tunnel died without the user asking.
+      _stopTicker();
+      unawaited(_flushPending());
+      hasError = true;
+      lastErrorMessage = errMsg ?? 'اتصال قطع شد.';
+      _setPhase(VpnPhase.disconnected);
+    } else if (_phase == VpnPhase.connecting) {
+      // start() observes the same event and will fail with the message.
+      hasError = true;
+      lastErrorMessage = errMsg;
+    }
+  }
+
+  /// Loads persisted usage and syncs the visible remaining time.
+  Future<void> _initLedger() async {
+    await ledger.ensureLoaded();
+    _syncFreeRemaining();
+    _ledgerReady = true;
+    _safeNotify();
+  }
+
+  /// notifyListeners that tolerates a controller disposed mid-flight.
+  void _safeNotify() {
+    if (_disposed) return;
+    notifyListeners();
+  }
+
+  /// Test hook: runs exactly one session tick (production uses Timer.periodic).
+  @visibleForTesting
+  void debugTick() => _tick();
 
   /// Consumes the timeout flag so a dialog is only shown once.
   bool consumeTimeoutFlag() {
@@ -174,21 +234,15 @@ class VpnController extends ChangeNotifier {
       if (freeRemaining <= Duration.zero) {
         freeRemaining = Duration.zero;
         // flush the ledger, then cut the tunnel
-        unawaited(
-          ledger
-              .addSeconds(_unsavedSeconds)
-              .then((_) => _unsavedSeconds = 0),
-        );
+        unawaited(_flushPending());
         unawaited(disconnect(timedOut: true));
         return;
       }
       if (_unsavedSeconds >= 5) {
-        final batch = _unsavedSeconds;
-        _unsavedSeconds = 0;
-        unawaited(ledger.addSeconds(batch).then((_) => _syncFreeRemaining()));
+        unawaited(_flushPending());
       }
     }
-    notifyListeners();
+    _safeNotify();
   }
 
   void _syncFreeRemaining() {
@@ -201,12 +255,16 @@ class VpnController extends ChangeNotifier {
 
   void _setPhase(VpnPhase p) {
     _phase = p;
-    notifyListeners();
+    _safeNotify();
   }
+
+  bool _disposed = false;
 
   @override
   void dispose() {
+    _disposed = true;
     _stopTicker();
+    unawaited(_engineEventsSub?.cancel());
     super.dispose();
   }
 }
