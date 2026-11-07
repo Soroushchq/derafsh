@@ -81,7 +81,7 @@ abstract final class S {
   static const String licensesFontDesc = 'قلم فارسی — اجازه‌نامهٔ SIL OFL 1.1';
   static const String licensesEngineTitle = 'sing-box / libbox';
   static const String licensesEngineDesc =
-      'موتور اتصال (در نسخهٔ بعدی) — GPLv3. از زحمات سازندگان آن سپاسگزاریم.';
+      'موتور اتصال — GPLv3. از زحمات سازندگان sing-box سپاسگزاریم.';
   static const String licensesView = 'دیدن متن کامل';
   static const String licensesClose = 'بستن';
 
@@ -96,7 +96,7 @@ abstract final class S {
   static const String advancedDevicePlaceholder = '— (در نسخهٔ بعدی)';
   static const String advancedGatePass = 'عبور';
   static const String advancedGateBlock = 'مسدود — به‌روزرسانی لازم است';
-  static const String advancedEngineStub = 'استاب نمایشی (نسخهٔ بعدی: sing-box)';
+  static const String advancedEngineStub = 'استاب نمایشی (تست)';
   static const String advancedFooter = 'این بخش برای اشکال‌زدایی است.';
 
   // --- update gate ---
@@ -115,4 +115,13 @@ abstract final class S {
       'اتصال برقرار نشد. چند لحظه بعد دوباره امتحان کن.';
   static const String of = 'از';
   static const String active = 'فعال';
+
+  // --- engine ---
+  static const String engineUnsupported =
+      'اتصال در این نسخه فقط روی اندروید فعال است؛ نسخهٔ iOS پس از امضای '
+      'توسعه‌دهندهٔ اپل فعال می‌شود.';
+  static const String sourcesEmpty = 'سورسی موجود نیست';
+  static const String sourcesCount = 'سورس';
+  static const String engineRowSingbox = 'sing-box (libbox) — GPLv3';
+  static const String defaultSourceName = 'سورس فعال';
 }

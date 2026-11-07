@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config.dart';
+import '../data/remote_config.dart';
 import '../core/strings.dart';
 import '../core/theme.dart';
 import '../design/kaviani_star.dart';
@@ -20,14 +22,24 @@ class PaywallSheet extends StatelessWidget {
 
   final VpnController controller;
 
-  void _onCta(BuildContext context) {
-    if (Config.telegramBotUrl.isEmpty) {
+  Future<void> _onCta(BuildContext context) async {
+    final botUrl = RuntimeConfig.botUrl;
+    if (botUrl.isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(content: Text(S.paywallCtaSoon)));
       return;
     }
-    // TODO(part4): launch the Telegram bot via url_launcher.
+    final uri = Uri.parse(botUrl);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text(S.paywallCtaSoon)));
+      }
+    }
   }
 
   @override

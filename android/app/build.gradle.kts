@@ -19,7 +19,9 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "app.derafsh.drf"
-    compileSdk = flutter.compileSdkVersion
+    // Explicit (not flutter defaults) so the build is deterministic and
+    // libbox APIs (IpPrefix, specialUse FGS) always compile.
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -33,8 +35,8 @@ android {
 
     defaultConfig {
         applicationId = "app.derafsh.drf"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -63,4 +65,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // sing-box libbox (built in CI with gomobile from SagerNet/sing-box v1.14.4)
+    implementation(files("libs/libbox.aar"))
 }

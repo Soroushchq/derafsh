@@ -16,3 +16,6 @@ String faMmSs(Duration d) {
   final s = d.inSeconds.remainder(60);
   return faNum('${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}');
 }
+
+/// Persian display of "a از b فعال".
+String activeCountLabel(int active, int total) => '$active از $total فعال';

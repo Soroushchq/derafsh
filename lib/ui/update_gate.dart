@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config.dart';
 import '../core/strings.dart';
@@ -39,11 +40,22 @@ class MandatoryUpdateGate extends StatelessWidget {
 class _UpdateBlockedScreen extends StatelessWidget {
   const _UpdateBlockedScreen();
 
-  void _onDownload(BuildContext context) {
-    // TODO(part4): open the download page / Telegram bot via url_launcher.
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text(S.updateSoon)));
+  Future<void> _onDownload(BuildContext context) async {
+    final uri = Uri.parse(Config.updateUrl);
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text(S.updateSoon)));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text(S.updateSoon)));
+      }
+    }
   }
 
   @override

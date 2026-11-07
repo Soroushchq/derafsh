@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/strings.dart';
 import '../../core/theme.dart';
-import '../../data/demo_sources.dart';
+import '../../data/drf_source.dart';
 
 /// A single VPN source card. Locked sources dim out with a painted lock and
 /// open the paywall on tap (handled by the parent).

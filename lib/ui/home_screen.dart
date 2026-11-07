@@ -4,7 +4,6 @@ import '../core/config.dart';
 import '../core/persian.dart';
 import '../core/strings.dart';
 import '../core/theme.dart';
-import '../data/demo_sources.dart';
 import '../design/kaviani_star.dart';
 import '../design/shine_button.dart';
 import '../design/stagger_in.dart';
@@ -258,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? S.statusDisconnecting
                                     : connected
                                         ? '${S.statusConnectedTo} '
-                                            '${demoSources[c.selectedSource].name}'
+                                            '${c.activeSourceName.isEmpty ? S.defaultSourceName : c.activeSourceName}'
                                         : S.statusDisconnected,
                             elapsed: c.elapsed,
                             premium: c.premium,
@@ -278,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     index: 1,
                     child: UsageStrip(
                       remaining: c.freeRemaining,
-                      total: c.freeDailyLimit,
+                      total: c.freeLimit,
                     ),
                   ),
                 ),
@@ -301,7 +300,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        activeCountLabel(1, demoSources.length),
+                        c.catalog.isEmpty
+                            ? S.sourcesEmpty
+                            : activeCountLabel(1, c.catalog.length),
                         style: const TextStyle(
                           fontFamily: 'Vazirmatn',
                           fontSize: 12,
@@ -317,13 +318,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 118,
                 child: StaggerIn(
                   index: 3,
-                  child: ListView.separated(
+                  child: c.catalog.isEmpty
+                      ? Center(
+                          child: Text(
+                            S.sourcesEmpty,
+                            style: const TextStyle(
+                              fontFamily: 'Vazirmatn',
+                              fontSize: 13,
+                              color: DrfColors.textFaint,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     scrollDirection: Axis.horizontal,
-                    itemCount: demoSources.length,
+                    itemCount: c.catalog.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, i) {
-                      final s = demoSources[i];
+                      final s = c.catalog[i];
                       return SourceCard(
                         source: s,
                         index: i,
