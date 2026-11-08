@@ -89,6 +89,20 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Prefer Maven Central for Flutter SDK gradle plugin deps
+        # The flutter_tools/gradle included build declares no pluginManagement,
+        # so Gradle defaults it to gradlePluginPortal — whose large Kotlin jars
+        # redirect to JetBrains' GitHub releases and 504'd during the v1.0.2
+        # release (2026-11-08). Maven Central serves the same artifacts
+        # (plugin markers included) from Sonatype's CDN; keep the portal as
+        # fallback. pluginManagement must be the first block, hence prepend.
+        run: |
+          F="$(dirname "$(dirname "$(which flutter)")")/packages/flutter_tools/gradle/settings.gradle.kts"
+          T="$(mktemp)"
+          printf 'pluginManagement {\n    repositories {\n        mavenCentral()\n        gradlePluginPortal()\n    }\n}\n\n' > "$T"
+          cat "$F" >> "$T" && cp "$T" "$F"
+          head -8 "$F"
+
       - name: Download libbox AAR
         uses: actions/download-artifact@v4
         with:
