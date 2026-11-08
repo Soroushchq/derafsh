@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/admin_store.dart';
 import '../data/drf_source.dart';
 import '../data/node_resolver.dart';
 import '../data/usage_ledger.dart';
@@ -13,7 +14,8 @@ enum VpnPhase { disconnected, connecting, connected, disconnecting }
 ///
 /// - the quota is a rolling 24h window per device, persisted locally
 ///   ([UsageLedger]); the Worker becomes authoritative once deployed.
-/// - [premium] unlocks every source and removes the quota.
+/// - [premium] and [admin] unlock every source and remove the quota
+///   ([admin] is the owner shortcut, persisted via [AdminStore]).
 class VpnController extends ChangeNotifier {
   VpnController({
     required this.engine,
@@ -22,12 +24,17 @@ class VpnController extends ChangeNotifier {
     this.freeLimit = const Duration(minutes: 30),
     bool premium = false,
     UsageLedger? ledger,
+    AdminStore? adminStore,
   })  : _premium = premium,
+        adminStore = adminStore ?? MemoryAdminStore(),
         ledger = ledger ?? UsageLedger(),
         freeRemaining = freeLimit {
     // B6 fix: load the persisted rolling-window usage immediately so the
     // usage strip and the connect gate reflect reality from app start.
     unawaited(_initLedger());
+    // restore the persisted admin flag (owner code) right after start.
+    _adminInit = _initAdmin();
+    unawaited(_adminInit);
     // B2 fix: keep listening to native state for the whole app lifetime so a
     // tunnel that dies mid-session is reflected in the UI and the quota.
     final events = engine.stateEvents;
@@ -41,9 +48,11 @@ class VpnController extends ChangeNotifier {
   final NodeResolver nodeResolver;
   final Duration freeLimit;
   final UsageLedger ledger;
+  final AdminStore adminStore;
 
   VpnPhase _phase = VpnPhase.disconnected;
   bool _premium;
+  bool _admin = false;
   bool _timedOutLastSession = false;
   int _selectedSource = 0;
   Duration _elapsed = Duration.zero;
@@ -55,10 +64,17 @@ class VpnController extends ChangeNotifier {
   Timer? _ticker;
   int _unsavedSeconds = 0;
   bool _ledgerReady = false;
+  Future<void>? _adminInit;
   StreamSubscription<Map<Object?, Object?>>? _engineEventsSub;
 
   VpnPhase get phase => _phase;
   bool get premium => _premium;
+
+  /// Owner/admin shortcut — implies every [premium] entitlement.
+  bool get admin => _admin;
+
+  /// Whether every source and unlimited time are available right now.
+  bool get unlocked => _premium || _admin;
   bool get timedOutLastSession => _timedOutLastSession;
   int get selectedSource => _selectedSource;
   Duration get elapsed => _elapsed;
@@ -74,6 +90,19 @@ class VpnController extends ChangeNotifier {
     _safeNotify();
   }
 
+  /// Marks admin mode (owner code gate in the UI) and persists it.
+  Future<void> setAdmin(bool value) async {
+    if (_admin == value) return;
+    _admin = value;
+    if (_admin) freeRemaining = freeLimit;
+    try {
+      await adminStore.write(value);
+    } catch (_) {
+      // persistence is best-effort; the in-memory flag stays authoritative
+    }
+    _safeNotify();
+  }
+
   void selectSource(int index) {
     if (index == _selectedSource) return;
     _selectedSource = index;
@@ -83,11 +112,11 @@ class VpnController extends ChangeNotifier {
   /// The source this controller would connect to right now
   /// (null when the catalog is empty — connect is not possible).
   DrfSource? get effectiveSource =>
-      catalog.effectiveSource(_selectedSource, _premium);
+      catalog.effectiveSource(_selectedSource, unlocked);
 
   Future<void> connect() async {
     if (isBusy || _phase == VpnPhase.connected) return;
-    if (!_premium && freeRemaining <= Duration.zero) {
+    if (!unlocked && freeRemaining <= Duration.zero) {
       _timedOutLastSession = true;
       _safeNotify();
       return;
@@ -104,7 +133,7 @@ class VpnController extends ChangeNotifier {
         await ledger.ensureLoaded();
         _syncFreeRemaining();
         _ledgerReady = true;
-        if (!_premium && freeRemaining <= Duration.zero) {
+        if (!unlocked && freeRemaining <= Duration.zero) {
           _setPhase(VpnPhase.disconnected);
           _timedOutLastSession = true;
           _safeNotify();
@@ -203,6 +232,21 @@ class VpnController extends ChangeNotifier {
     _safeNotify();
   }
 
+  /// Restores the persisted admin flag (owner code), never throws.
+  Future<void> _initAdmin() async {
+    try {
+      _admin = await adminStore.read();
+    } catch (_) {
+      _admin = false;
+    }
+    if (_admin) freeRemaining = freeLimit;
+    _safeNotify();
+  }
+
+  /// Test hook: resolves once the persisted admin flag has been applied.
+  @visibleForTesting
+  Future<void> debugWaitAdminInit() async => _adminInit;
+
   /// notifyListeners that tolerates a controller disposed mid-flight.
   void _safeNotify() {
     if (_disposed) return;
@@ -232,7 +276,7 @@ class VpnController extends ChangeNotifier {
 
   void _tick() {
     _elapsed += const Duration(seconds: 1);
-    if (!_premium) {
+    if (!unlocked) {
       _unsavedSeconds += 1;
       if (freeRemaining > Duration.zero) {
         freeRemaining -= const Duration(seconds: 1);

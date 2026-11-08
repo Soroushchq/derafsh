@@ -16,6 +16,15 @@ abstract final class S {
   // --- header chips ---
   static const String chipFree = 'رایگان';
   static const String chipPremium = 'پرمیوم';
+  static const String chipAdmin = 'ادمین';
+
+  // --- admin gate (long-press on the account chip) ---
+  static const String adminPromptTitle = 'ورود ادمین';
+  static const String adminFieldHint = 'کد ادمین را وارد کن';
+  static const String adminConfirm = 'فعال‌سازی';
+  static const String adminCancel = 'انصراف';
+  static const String adminOk = 'حالت ادمین فعال شد — همهٔ سورس‌ها باز است';
+  static const String adminBad = 'کد ادمین اشتباه است';
 
   // --- sources ---
   static const String sourcesTitle = 'سورس‌ها';

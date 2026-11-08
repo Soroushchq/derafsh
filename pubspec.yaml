@@ -12,6 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   http: ^1.2.0
+  crypto: ^3.0.6
   shared_preferences: ^2.3.2
   url_launcher: ^6.3.0
 

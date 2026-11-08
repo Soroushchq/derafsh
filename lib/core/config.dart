@@ -10,10 +10,10 @@ class Config {
   static const String applicationId = 'app.derafsh.drf';
 
   /// Display version shown in the UI. Keep in sync with pubspec `version`.
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.2';
 
   /// Monotonic build number. Keep in sync with pubspec `version` (+N).
-  static const int buildNumber = 1;
+  static const int buildNumber = 3;
 
   /// TODO(worker): minimum build allowed to connect; served by /v1/sources.
   /// A local fallback so the gate logic is testable before the Worker exists.
@@ -30,6 +30,12 @@ class Config {
   /// Telegram bot deep link (payment/activation). Overridable by the remote
   /// config endpoint at startup.
   static const String telegramBotUrl = 'https://t.me/PDerafshVpnbot';
+
+  /// SHA-256 of the owner-only admin code. The code itself is never stored
+  /// in the repository — entering it (long-press on the account chip)
+  /// unlocks every source and removes the free quota (admin mode).
+  static const String adminCodeSha256 =
+      '0a62aa214638e09e0bf0d3d609d4972bc2e6c99073a9570e2368b5f3c70a952e';
 
   /// Optional remote config endpoint (owner-operated, Cloudflare Worker).
   /// Best-effort at startup: may override bot_url and report the latest

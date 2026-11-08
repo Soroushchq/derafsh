@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'app.dart';
 import 'core/config.dart';
 import 'core/strings.dart';
+import 'data/admin_store.dart';
 import 'data/drf_source.dart';
 import 'data/node_resolver.dart';
 import 'data/remote_config.dart';
@@ -40,6 +41,7 @@ Future<void> main() async {
     catalog: catalog,
     nodeResolver: SingBoxNodeResolver(),
     freeLimit: Config.freeDailyLimit,
+    adminStore: PrefsAdminStore(),
   );
   runApp(DerafshApp(controller: controller));
 }

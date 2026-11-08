@@ -4,6 +4,7 @@ import '../core/config.dart';
 import '../core/persian.dart';
 import '../core/strings.dart';
 import '../core/theme.dart';
+import '../data/admin_store.dart';
 import '../design/kaviani_star.dart';
 import '../design/shine_button.dart';
 import '../design/stagger_in.dart';
@@ -29,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _versionTaps = 0;
   VpnPhase _prevPhase = VpnPhase.disconnected;
+  final TextEditingController _adminCodeCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     widget.controller.removeListener(_onChanged);
+    _adminCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -103,6 +106,66 @@ class _HomeScreenState extends State<HomeScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.6),
       builder: (_) => PaywallSheet(controller: widget.controller),
     );
+  }
+
+  /// Owner entry point: long-press the account chip and enter the admin
+  /// code (only its SHA-256 ships with the app) to unlock every source.
+  void _openAdminGate() {
+    final c = widget.controller;
+    if (c.admin) return;
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: DrfColors.surfaceHi,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          S.adminPromptTitle,
+          style: const TextStyle(
+              fontFamily: 'Vazirmatn', fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        content: TextField(
+          controller: _adminCodeCtrl,
+          obscureText: true,
+          autofocus: true,
+          style: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 14),
+          decoration: const InputDecoration(hintText: S.adminFieldHint),
+          onSubmitted: (_) => _tryAdmin(dialogCtx),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text(S.adminCancel),
+          ),
+          TextButton(
+            onPressed: () => _tryAdmin(dialogCtx),
+            child: const Text(
+              S.adminConfirm,
+              style: TextStyle(color: DrfColors.gold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _tryAdmin(BuildContext dialogCtx) async {
+    final c = widget.controller;
+    final ok = adminCodeMatches(_adminCodeCtrl.text, Config.adminCodeSha256);
+    if (ok) {
+      Navigator.of(dialogCtx).pop();
+      _adminCodeCtrl.clear();
+      await c.setAdmin(true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(S.adminOk)));
+    } else {
+      _adminCodeCtrl.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(S.adminBad)));
+    }
   }
 
   void _openAdvanced() {
@@ -198,7 +261,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const Spacer(),
-                      _AccountChip(premium: c.premium),
+                      _AccountChip(
+                        premium: c.unlocked,
+                        admin: c.admin,
+                        onLongPress: _openAdminGate,
+                      ),
                     ],
                   ),
                 ),
@@ -260,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             '${c.activeSourceName.isEmpty ? S.defaultSourceName : c.activeSourceName}'
                                         : S.statusDisconnected,
                             elapsed: c.elapsed,
-                            premium: c.premium,
+                            premium: c.unlocked,
                           ),
                         ],
                       ),
@@ -270,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               // ---------- usage strip (free only) ----------
-              if (!c.premium)
+              if (!c.unlocked)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                   child: StaggerIn(
@@ -342,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         selected: c.selectedSource == i,
                         connected: connected,
                         onTap: () {
-                          if (s.locked) {
+                          if (s.locked && !c.unlocked) {
                             _openPaywall();
                           } else {
                             c.selectSource(i);
@@ -375,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               // ---------- upsell line ----------
-              if (!c.premium)
+              if (!c.unlocked)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                   child: StaggerIn(
@@ -539,43 +606,56 @@ class TextSpanButton extends StatelessWidget {
 }
 
 class _AccountChip extends StatelessWidget {
-  const _AccountChip({required this.premium});
+  const _AccountChip({
+    required this.premium,
+    required this.admin,
+    this.onLongPress,
+  });
 
   final bool premium;
+  final bool admin;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: premium
-            ? DrfColors.gold.withValues(alpha: 0.16)
-            : DrfColors.surface.withValues(alpha: 0.8),
-        border: Border.all(
-          color: premium ? DrfColors.gold : DrfColors.stroke,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            premium ? Icons.workspace_premium : Icons.bolt,
-            size: 14,
-            color: premium ? DrfColors.gold : DrfColors.textDim,
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: premium
+              ? DrfColors.gold.withValues(alpha: 0.16)
+              : DrfColors.surface.withValues(alpha: 0.8),
+          border: Border.all(
+            color: premium ? DrfColors.gold : DrfColors.stroke,
           ),
-          const SizedBox(width: 5),
-          Text(
-            premium ? S.chipPremium : S.chipFree,
-            style: TextStyle(
-              fontFamily: 'Vazirmatn',
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              admin
+                  ? Icons.admin_panel_settings
+                  : premium
+                      ? Icons.workspace_premium
+                      : Icons.bolt,
+              size: 14,
               color: premium ? DrfColors.gold : DrfColors.textDim,
             ),
-          ),
-        ],
+            const SizedBox(width: 5),
+            Text(
+              admin ? S.chipAdmin : (premium ? S.chipPremium : S.chipFree),
+              style: TextStyle(
+                fontFamily: 'Vazirmatn',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: premium ? DrfColors.gold : DrfColors.textDim,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

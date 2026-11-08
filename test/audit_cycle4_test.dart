@@ -150,10 +150,11 @@ void main() {
         ),
       );
 
-      // local fallback: build 1 >= min 1 → pass
+      // local fallback: current build >= min build → pass
       expect(find.text(S.advancedGatePass), findsOneWidget);
-      // both the build-number row and the min-build row show "1"
-      expect(find.text('${Config.minRequiredBuild}'), findsNWidgets(2));
+      // the build-number row and the min-build row show their constants
+      expect(find.text('${Config.buildNumber}'), findsOneWidget);
+      expect(find.text('${Config.minRequiredBuild}'), findsOneWidget);
 
       // server demands a newer build → diagnostics must show blocked
       MandatoryUpdateGate.applyServerMinBuild(999);
