@@ -55,8 +55,10 @@ class SingBoxNodeResolver implements NodeResolver {
           lastError = EngineException('سورس خالی بود.');
           continue;
         }
-        final node = pickNode(nodes);
-        return ResolvedNode(config: ConfigBuilder.build(node), sourceUrl: url);
+        return ResolvedNode(
+          config: ConfigBuilder.buildPool(pickTopNodes(nodes, ConfigBuilder.maxPoolMembers)),
+          sourceUrl: url,
+        );
       } on EngineException catch (e) {
         lastError = e;
       } catch (_) {
@@ -69,11 +71,17 @@ class SingBoxNodeResolver implements NodeResolver {
 
   /// Deterministic pseudo-rotation: prefer higher-ranked nodes, break ties
   /// with a day-seeded shuffle so the load spreads across the day.
-  static DrfNode pickNode(List<DrfNode> nodes) {
+  static DrfNode pickNode(List<DrfNode> nodes) =>
+      pickTopNodes(nodes, 1).first;
+
+  /// Returns up to [k] nodes, best-first: rank descending, day-seeded
+  /// shuffle as tie-breaker. The pool feeds the urltest health checks
+  /// (ConfigBuilder.buildPool) so sing-box itself skips dead members.
+  static List<DrfNode> pickTopNodes(List<DrfNode> nodes, int k) {
     final seed = DateTime.now().toUtc().difference(DateTime.utc(2026)).inDays;
     final list = [...nodes]..shuffle(Random(seed));
     list.sort((a, b) => b.rank.compareTo(a.rank));
-    return list.first;
+    return list.take(k).toList();
   }
 
   Future<String> _fetchBody(String url) async {
