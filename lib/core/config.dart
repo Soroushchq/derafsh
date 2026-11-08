@@ -10,10 +10,10 @@ class Config {
   static const String applicationId = 'app.derafsh.drf';
 
   /// Display version shown in the UI. Keep in sync with pubspec `version`.
-  static const String appVersion = '1.0.2';
+  static const String appVersion = '1.0.3';
 
   /// Monotonic build number. Keep in sync with pubspec `version` (+N).
-  static const int buildNumber = 3;
+  static const int buildNumber = 4;
 
   /// TODO(worker): minimum build allowed to connect; served by /v1/sources.
   /// A local fallback so the gate logic is testable before the Worker exists.
